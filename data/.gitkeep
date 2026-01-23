@@ -1,0 +1,3 @@
+# This directory stores training data
+# - shakespeare.txt: Training corpus
+# - qa_pairs.json: Fine-tuning Q&A data
