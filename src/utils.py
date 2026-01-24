@@ -430,3 +430,315 @@ def create_qa_pairs_from_shakespeare(
             qa_pairs.append({"question": "Recite a Shakespeare line:", "answer": line})
 
     return qa_pairs[:num_pairs]
+
+
+# =============================================================================
+# EDUCATIONAL DEMO
+# Run with: python -m src.utils
+# =============================================================================
+if __name__ == "__main__":
+    print("=" * 70)
+    print("UTILITIES DEMO - Data Loading and Checkpointing")
+    print("=" * 70)
+    print()
+    print("This module provides the 'plumbing' for training LLMs:")
+    print("  - TextDataset: Prepares text as input-target pairs")
+    print("  - DataLoader: Batches data for efficient training")
+    print("  - Checkpointing: Save/load model state")
+    print()
+    print("Dependencies:")
+    print("  - src.tokenizer (for encoding text)")
+    print("  - src.model (for model serialization)")
+    print()
+
+    import os
+    import tempfile
+
+    from src.model import GPTConfig, GPTModel
+    from src.tokenizer import BPETokenizer
+
+    # -------------------------------------------------------------------------
+    # TEXT DATASET
+    # -------------------------------------------------------------------------
+    print("-" * 70)
+    print("1. TEXT DATASET - Preparing Data for Language Modeling")
+    print("-" * 70)
+    print()
+    print("Language models learn to predict the next token. We create")
+    print("input-target pairs where the target is the input shifted by 1:")
+    print()
+    print('  Text:    "The cat sat on the mat"')
+    print("  Tokens:  [The] [cat] [sat] [on] [the] [mat]")
+    print("  Input:   [The] [cat] [sat] [on] [the]")
+    print("  Target:  [cat] [sat] [on] [the] [mat]")
+    print()
+    print("The model learns: given [The], predict [cat]; given [cat], predict [sat]...")
+    print()
+
+    # Create a simple tokenizer trained on some text
+    sample_text = """
+    To be, or not to be, that is the question:
+    Whether 'tis nobler in the mind to suffer
+    The slings and arrows of outrageous fortune,
+    Or to take arms against a sea of troubles
+    And by opposing end them. To die, to sleep,
+    No more; and by a sleep to say we end
+    The heart-ache and the thousand natural shocks
+    That flesh is heir to, 'tis a consummation
+    Devoutly to be wished. To die, to sleep;
+    To sleep, perchance to dream: ay, there's the rub.
+    """
+
+    print("Training tokenizer on sample text...")
+    tokenizer = BPETokenizer()
+    tokenizer.train(
+        sample_text * 10, vocabulary_size=200
+    )  # Repeat for more training data
+    print(f"Vocabulary size: {tokenizer.vocabulary_size}")
+    print()
+
+    # Create dataset
+    sequence_length = 16
+    dataset = TextDataset(
+        text=sample_text,
+        tokenizer=tokenizer,
+        sequence_length=sequence_length,
+        stride=8,  # Overlapping sequences
+    )
+
+    print("Dataset created:")
+    print(f"  Total tokens: {len(dataset.token_ids)}")
+    print(f"  Sequence length: {dataset.sequence_length}")
+    print(f"  Stride (overlap): {dataset.stride}")
+    print(f"  Number of sequences: {len(dataset)}")
+    print()
+
+    # Show an example
+    if len(dataset) > 0:
+        input_ids, target_ids = dataset[0]
+        print("Example sequence (index 0):")
+        print(f"  Input IDs:  {input_ids[:10]}... (len={len(input_ids)})")
+        print(f"  Target IDs: {target_ids[:10]}... (len={len(target_ids)})")
+        print()
+        print("Notice: target[i] = input[i+1] (shifted by one position)")
+        print(f"  input[0]={input_ids[0]} -> target[0]={target_ids[0]}")
+        print(f"  input[1]={input_ids[1]} -> target[1]={target_ids[1]}")
+        print()
+
+    # -------------------------------------------------------------------------
+    # DATA LOADER
+    # -------------------------------------------------------------------------
+    print("-" * 70)
+    print("2. DATA LOADER - Batching for Efficient Training")
+    print("-" * 70)
+    print()
+    print("Training works best with batches of data:")
+    print("  - GPU parallelism: Process multiple sequences at once")
+    print("  - Gradient stability: Average over multiple examples")
+    print("  - Shuffling: Different order each epoch prevents overfitting")
+    print()
+
+    batch_size = 4
+    loader = DataLoader(dataset, batch_size=batch_size, shuffle=True, drop_last=False)
+
+    print("DataLoader created:")
+    print(f"  Batch size: {batch_size}")
+    print("  Shuffle: True (different order each epoch)")
+    print("  Drop last: False (include partial final batch)")
+    print(f"  Number of batches: {len(loader)}")
+    print()
+
+    # Show one batch
+    print("Iterating through one epoch:")
+    for batch_idx, (inputs, targets) in enumerate(loader):
+        print(f"  Batch {batch_idx}: inputs={inputs.shape}, targets={targets.shape}")
+        if batch_idx >= 2:
+            print("  ...")
+            break
+    print()
+
+    # -------------------------------------------------------------------------
+    # GET_BATCH FUNCTION
+    # -------------------------------------------------------------------------
+    print("-" * 70)
+    print("3. GET_BATCH - Quick Batch Sampling")
+    print("-" * 70)
+    print()
+    print("For simpler training loops, get_batch() samples random sequences:")
+    print()
+
+    token_ids = np.array(tokenizer.encode(sample_text), dtype=np.int64)
+
+    inputs, targets = get_batch(
+        token_ids=token_ids, batch_size=8, sequence_length=16, random_offset=True
+    )
+
+    print("get_batch() result:")
+    print(f"  Input shape: {inputs.shape}")
+    print(f"  Target shape: {targets.shape}")
+    print()
+    print("Each row is a randomly sampled sequence from the text.")
+    print("Good for simple training; DataLoader better for full coverage.")
+    print()
+
+    # -------------------------------------------------------------------------
+    # CHECKPOINTING
+    # -------------------------------------------------------------------------
+    print("-" * 70)
+    print("4. CHECKPOINTING - Saving and Loading Models")
+    print("-" * 70)
+    print()
+    print("Training large models takes time. Checkpoints let you:")
+    print("  - Resume training after interruption")
+    print("  - Save best model during training")
+    print("  - Share trained models with others")
+    print()
+
+    # Create a small model
+    config = GPTConfig(
+        vocab_size=tokenizer.vocabulary_size,
+        embedding_dim=64,
+        num_heads=2,
+        num_layers=2,
+        ffn_hidden_dim=128,
+        max_sequence_length=32,
+    )
+    model = GPTModel(config)
+
+    print(
+        f"Created model with {sum(p.size for p in model.get_parameters().values()):,} parameters"
+    )
+    print()
+
+    # Get initial weights for comparison
+    initial_params = {k: v.copy() for k, v in model.get_parameters().items()}
+
+    # Modify some weights (simulating training)
+    params = model.get_parameters()
+    for name, param in params.items():
+        params[name] = param + np.random.randn(*param.shape) * 0.01
+    model.set_parameters(params)
+
+    print("Modified weights (simulating training)...")
+    print()
+
+    # Save checkpoint
+    with tempfile.NamedTemporaryFile(suffix=".npz", delete=False) as f:
+        checkpoint_path = f.name
+
+    save_checkpoint(
+        model=model,
+        filepath=checkpoint_path,
+        step=1000,
+        optimizer_state={"learning_rate": 0.001, "beta1": 0.9},
+        extra_data={"loss": 2.5, "epoch": 5},
+    )
+
+    file_size = os.path.getsize(checkpoint_path)
+    print("Saved checkpoint:")
+    print(f"  Path: {checkpoint_path}")
+    print(f"  Size: {file_size / 1024:.1f} KB")
+    print()
+
+    # Create fresh model and load checkpoint
+    model2 = GPTModel(config)
+
+    # Verify weights are different before loading
+    params_before = model2.get_parameters()
+    diff_before = np.abs(
+        params_before["token_embedding.weight"] - params["token_embedding.weight"]
+    ).mean()
+
+    step, opt_state = load_checkpoint(model2, checkpoint_path)
+
+    # Verify weights match after loading
+    params_after = model2.get_parameters()
+    diff_after = np.abs(
+        params_after["token_embedding.weight"] - params["token_embedding.weight"]
+    ).mean()
+
+    print("Loaded checkpoint:")
+    print(f"  Step: {step}")
+    print(f"  Optimizer state: {opt_state}")
+    print()
+    print("Weight verification:")
+    print(f"  Difference before load: {diff_before:.6f}")
+    print(f"  Difference after load:  {diff_after:.6f}")
+    print(f"  Weights restored correctly: {diff_after < 1e-10}")
+    print()
+
+    # Cleanup
+    os.unlink(checkpoint_path)
+
+    # -------------------------------------------------------------------------
+    # SHAKESPEARE DOWNLOAD
+    # -------------------------------------------------------------------------
+    print("-" * 70)
+    print("5. DATA DOWNLOAD - Getting Training Data")
+    print("-" * 70)
+    print()
+    print("The download_shakespeare() function fetches the Tiny Shakespeare")
+    print("dataset (~1MB of text) commonly used for LLM experiments:")
+    print()
+    print("  filepath = download_shakespeare('data')")
+    print("  # Downloads to data/shakespeare.txt")
+    print()
+    print("This provides enough text to train a small model and see")
+    print("it generate Shakespeare-like output!")
+    print()
+
+    # -------------------------------------------------------------------------
+    # TRAINING LOOP PATTERN
+    # -------------------------------------------------------------------------
+    print("-" * 70)
+    print("6. TRAINING LOOP PATTERN")
+    print("-" * 70)
+    print()
+    print("Here's how these utilities fit together in training:")
+    print()
+    print("```python")
+    print("# Setup")
+    print("tokenizer = BPETokenizer()")
+    print("tokenizer.load('tokenizer.json')")
+    print("dataset = TextDataset(text, tokenizer, sequence_length=128)")
+    print("loader = DataLoader(dataset, batch_size=32, shuffle=True)")
+    print()
+    print("model = GPTModel(config)")
+    print("optimizer = AdamW(learning_rate=3e-4)")
+    print()
+    print("# Training loop")
+    print("for epoch in range(num_epochs):")
+    print("    for batch_idx, (inputs, targets) in enumerate(loader):")
+    print("        # Forward pass")
+    print("        logits = model.forward(inputs)")
+    print("        loss = cross_entropy(logits, targets)")
+    print()
+    print("        # Backward pass")
+    print("        model.zero_grad()")
+    print("        model.backward(targets)")
+    print()
+    print("        # Optimizer step")
+    print("        optimizer.step(model.get_parameters(), model.get_gradients())")
+    print()
+    print("        # Checkpoint periodically")
+    print("        if batch_idx % 1000 == 0:")
+    print("            save_checkpoint(model, f'checkpoint_{batch_idx}.npz')")
+    print("```")
+    print()
+
+    print("=" * 70)
+    print("SUMMARY")
+    print("=" * 70)
+    print("- TextDataset: Converts text to (input, target) pairs for LM training")
+    print("- DataLoader: Batches data with shuffling for efficient training")
+    print("- get_batch(): Quick random batch sampling")
+    print("- save/load_checkpoint(): Persist and restore model state")
+    print("- download_shakespeare(): Get training data easily")
+    print()
+    print("These utilities handle the 'plumbing' so you can focus on the model!")
+    print()
+    print("CONGRATULATIONS! You've explored all the core modules.")
+    print("Next: Try running the training scripts:")
+    print("  - python train_pretrain.py (train from scratch)")
+    print("  - python train_finetune_lora.py (efficient fine-tuning)")
+    print("  - python run_demo.py (interactive generation)")

@@ -552,3 +552,165 @@ class PositionalEncoding:
         position_encoding = self.get_encoding(sequence_length)
 
         return embeddings + position_encoding
+
+
+# =============================================================================
+# EDUCATIONAL DEMO
+# Run with: python -m src.layers
+# =============================================================================
+if __name__ == "__main__":
+    print("=" * 70)
+    print("NEURAL NETWORK LAYERS DEMO")
+    print("=" * 70)
+    print()
+    print("This module provides the building blocks for neural networks:")
+    print("  - Linear: Learnable matrix multiplication (the core operation)")
+    print("  - LayerNorm: Stabilizes training by normalizing activations")
+    print("  - Embedding: Converts token IDs to vectors")
+    print("  - PositionalEncoding: Adds position information to embeddings")
+    print()
+    print("Dependencies: src.activations (uses activation functions)")
+    print()
+
+    # -------------------------------------------------------------------------
+    # LINEAR LAYER: The fundamental building block
+    # -------------------------------------------------------------------------
+    print("-" * 70)
+    print("1. LINEAR LAYER - Learnable transformation")
+    print("-" * 70)
+    print()
+    print("A linear layer computes: output = input @ weights.T + bias")
+    print("The weights and bias are learned during training.")
+    print()
+
+    # Create a linear layer: 4 input features -> 3 output features
+    linear = Linear(input_features=4, output_features=3)
+    print(f"Linear layer: {linear.input_features} -> {linear.output_features}")
+    print(f"  Weight shape: {linear.weights.shape} (output_features x input_features)")
+    print(f"  Bias shape: {linear.bias.shape}")
+    print(f"  Total parameters: {linear.weights.size + linear.bias.size}")
+    print()
+
+    # Forward pass
+    x = np.array([[1.0, 2.0, 3.0, 4.0]])  # Batch of 1, 4 features
+    output = linear.forward(x)
+    print(f"Input shape: {x.shape}")
+    print(f"Output shape: {output.shape}")
+    print()
+
+    # Backward pass demonstration
+    upstream_grad = np.ones_like(output)  # Gradient from next layer
+    input_grad = linear.backward(upstream_grad)
+    grads = linear.get_gradients()
+    print("After backward pass, we have gradients for learning:")
+    print(f"  Weight gradient shape: {grads['weight'].shape}")
+    print(f"  Bias gradient shape: {grads['bias'].shape}")
+    print(f"  Input gradient shape: {input_grad.shape} (to pass to previous layer)")
+    print()
+
+    # -------------------------------------------------------------------------
+    # LAYER NORMALIZATION: Training stability
+    # -------------------------------------------------------------------------
+    print("-" * 70)
+    print("2. LAYER NORMALIZATION - Stabilizing activations")
+    print("-" * 70)
+    print()
+    print("LayerNorm normalizes values to have mean=0, std=1, then scales/shifts.")
+    print("This prevents values from exploding or vanishing during training.")
+    print()
+
+    layer_norm = LayerNorm(normalized_shape=4)
+
+    # Simulate activations with varying scales
+    x = np.array([[100.0, 200.0, 300.0, 400.0], [0.001, 0.002, 0.003, 0.004]])
+    print("Input (notice very different scales between rows):")
+    print(f"  Row 1: {x[0]}")
+    print(f"  Row 2: {x[1]}")
+    print()
+
+    normalized = layer_norm.forward(x)
+    print("After LayerNorm (both rows now have similar scale):")
+    print(f"  Row 1: {normalized[0]}")
+    print(f"  Row 2: {normalized[1]}")
+    print()
+    print(f"  Row 1 mean: {normalized[0].mean():.6f}, std: {normalized[0].std():.6f}")
+    print(f"  Row 2 mean: {normalized[1].mean():.6f}, std: {normalized[1].std():.6f}")
+    print()
+
+    # -------------------------------------------------------------------------
+    # EMBEDDING: Token IDs to vectors
+    # -------------------------------------------------------------------------
+    print("-" * 70)
+    print("3. EMBEDDING - Converting tokens to vectors")
+    print("-" * 70)
+    print()
+    print("The embedding layer is a lookup table: each token ID maps to a vector.")
+    print("These vectors are learned during training to capture token meaning.")
+    print()
+
+    # Create embedding: vocabulary of 100 tokens, 8-dimensional embeddings
+    vocab_size = 100
+    embedding_dim = 8
+    embedding = Embedding(vocabulary_size=vocab_size, embedding_dimension=embedding_dim)
+    print(f"Embedding table shape: {embedding.embedding_table.shape}")
+    print(f"  - {vocab_size} tokens in vocabulary")
+    print(f"  - Each token represented by {embedding_dim} numbers")
+    print()
+
+    # Look up embeddings for some token IDs
+    token_ids = np.array([[5, 10, 15]])  # 3 tokens
+    embeddings = embedding.forward(token_ids)
+    print(f"Token IDs: {token_ids[0]}")
+    print(f"Output shape: {embeddings.shape} (batch=1, seq_len=3, embed_dim=8)")
+    print()
+    print("Embedding for token 5 (first 4 values):", embeddings[0, 0, :4].round(3))
+    print("Embedding for token 10 (first 4 values):", embeddings[0, 1, :4].round(3))
+    print()
+    print("Key insight: Similar tokens will have similar embeddings after training.")
+    print()
+
+    # -------------------------------------------------------------------------
+    # POSITIONAL ENCODING: Where is each token?
+    # -------------------------------------------------------------------------
+    print("-" * 70)
+    print("4. POSITIONAL ENCODING - Adding position information")
+    print("-" * 70)
+    print()
+    print("Token embeddings don't know their position in the sequence.")
+    print("'Dog bites man' and 'Man bites dog' would look the same!")
+    print("Positional encoding adds unique patterns for each position.")
+    print()
+
+    pos_encoder = PositionalEncoding(
+        embedding_dimension=embedding_dim, max_sequence_length=50
+    )
+
+    # Get encodings for first 5 positions
+    pos_encodings = pos_encoder.get_encoding(5)
+    print(f"Positional encoding shape: {pos_encodings.shape} (5 positions, 8 dims)")
+    print()
+    print("Each position has a unique pattern (first 4 dimensions shown):")
+    for pos in range(5):
+        print(f"  Position {pos}: {pos_encodings[pos, :4].round(3)}")
+    print()
+
+    # Show how it's added to embeddings
+    print("Adding positional encoding to token embeddings:")
+    combined = pos_encoder.forward(embeddings)
+    print(f"  Original embedding[0,0]: {embeddings[0, 0, :4].round(3)}")
+    print(f"  + Position encoding[0]:  {pos_encodings[0, :4].round(3)}")
+    print(f"  = Combined[0,0]:         {combined[0, 0, :4].round(3)}")
+    print()
+
+    print("=" * 70)
+    print("SUMMARY")
+    print("=" * 70)
+    print("- Linear: The learnable transformation (weights and biases)")
+    print("- LayerNorm: Keeps values stable during training")
+    print("- Embedding: Turns token IDs into meaningful vectors")
+    print("- PositionalEncoding: Tells the model where each token is")
+    print()
+    print("In a transformer, data flows:")
+    print("  Token IDs -> Embedding -> + PositionalEncoding -> Linear layers...")
+    print()
+    print("Next step: Run 'python -m src.tokenizer' to see how text becomes token IDs.")

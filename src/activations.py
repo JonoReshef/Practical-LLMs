@@ -271,3 +271,122 @@ def relu_backward(upstream_gradient: np.ndarray, x: np.ndarray) -> np.ndarray:
     input_gradient = upstream_gradient * relu_mask
 
     return input_gradient
+
+
+# =============================================================================
+# EDUCATIONAL DEMO
+# Run with: python -m src.activations
+# =============================================================================
+if __name__ == "__main__":
+    print("=" * 70)
+    print("ACTIVATION FUNCTIONS DEMO")
+    print("=" * 70)
+    print()
+    print("This module provides activation functions - nonlinear transformations")
+    print("that allow neural networks to learn complex patterns.")
+    print()
+    print("Dependencies: None (this is a foundational module)")
+    print()
+
+    # -------------------------------------------------------------------------
+    # SOFTMAX: Converting scores to probabilities
+    # -------------------------------------------------------------------------
+    print("-" * 70)
+    print("1. SOFTMAX - Converting logits to probabilities")
+    print("-" * 70)
+    print()
+    print("Softmax converts arbitrary numbers into a probability distribution.")
+    print("Used in attention (to weight which tokens to focus on) and output")
+    print("(to predict which token comes next).")
+    print()
+
+    # Example: attention scores for 4 tokens
+    attention_scores = np.array([2.0, 1.0, 0.5, -1.0])
+    print(f"Input (attention scores): {attention_scores}")
+    print("  These could be 'how relevant is each token to the current token'")
+    print()
+
+    attention_weights = softmax(attention_scores)
+    print(f"Output (attention weights): {attention_weights}")
+    print(f"  Sum of weights: {attention_weights.sum():.6f} (always 1.0)")
+    print()
+    print("Notice: Higher input scores get higher probabilities.")
+    print(
+        "        Score 2.0 -> {:.1%}, Score -1.0 -> {:.1%}".format(
+            attention_weights[0], attention_weights[3]
+        )
+    )
+    print()
+
+    # Numerical stability demonstration
+    print("Numerical stability:")
+    large_values = np.array([1000.0, 1001.0, 1002.0])
+    print(f"  Large inputs: {large_values}")
+    print(f"  Softmax handles them: {softmax(large_values)}")
+    print("  (Without the max-subtraction trick, this would overflow)")
+    print()
+
+    # -------------------------------------------------------------------------
+    # GELU: The activation function used in transformers
+    # -------------------------------------------------------------------------
+    print("-" * 70)
+    print("2. GELU - Gaussian Error Linear Unit")
+    print("-" * 70)
+    print()
+    print("GELU is used in the feed-forward networks inside transformer blocks.")
+    print("Unlike ReLU which harshly cuts off negatives, GELU has a smooth curve.")
+    print()
+
+    x_values = np.array([-2.0, -1.0, -0.5, 0.0, 0.5, 1.0, 2.0])
+    gelu_values = gelu(x_values)
+    relu_values = relu(x_values)
+
+    print("Comparing GELU vs ReLU:")
+    print()
+    print("    x     |   GELU   |   ReLU   ")
+    print("  --------|----------|----------")
+    for x, g, r in zip(x_values, gelu_values, relu_values):
+        print(f"  {x:6.2f}  | {g:8.4f} | {r:8.4f}")
+    print()
+    print("Key insight: GELU allows small negative values through,")
+    print("             which can help the model learn more nuanced patterns.")
+    print()
+
+    # -------------------------------------------------------------------------
+    # BACKWARD PASS: How gradients flow
+    # -------------------------------------------------------------------------
+    print("-" * 70)
+    print("3. BACKWARD PASS - Computing gradients for learning")
+    print("-" * 70)
+    print()
+    print("During training, we need to compute how changing the input would")
+    print("affect the output. This is the 'gradient' or 'derivative'.")
+    print()
+
+    x = np.array([[-1.0, 0.5, 2.0]])
+    upstream_grad = np.array([[1.0, 1.0, 1.0]])  # Gradient from next layer
+
+    print(f"Input x: {x[0]}")
+    print(f"Upstream gradient (from next layer): {upstream_grad[0]}")
+    print()
+
+    gelu_grad = gelu_backward(upstream_grad, x)
+    relu_grad = relu_backward(upstream_grad, x)
+
+    print("Gradients (how much each input affects the output):")
+    print(f"  GELU gradient: {gelu_grad[0]}")
+    print(f"  ReLU gradient: {relu_grad[0]}")
+    print()
+    print("Notice: ReLU has gradient 0 for x=-1 (completely blocked),")
+    print("        while GELU has a small gradient (still learning).")
+    print()
+
+    print("=" * 70)
+    print("SUMMARY")
+    print("=" * 70)
+    print("- Softmax: Turns scores into probabilities (for attention & prediction)")
+    print("- GELU: Smooth activation function (inside transformer blocks)")
+    print("- Backward functions: Enable learning by computing gradients")
+    print()
+    print("Next step: Run 'python -m src.layers' to see how these are used")
+    print("           in neural network layers.")

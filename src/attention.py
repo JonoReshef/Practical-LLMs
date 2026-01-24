@@ -566,3 +566,202 @@ def create_causal_mask(sequence_length: int) -> np.ndarray:
     """
     # np.tril creates lower triangular matrix (including diagonal)
     return np.tril(np.ones((sequence_length, sequence_length), dtype=bool))
+
+
+# =============================================================================
+# EDUCATIONAL DEMO
+# Run with: python -m src.attention
+# =============================================================================
+if __name__ == "__main__":
+    print("=" * 70)
+    print("ATTENTION MECHANISM DEMO")
+    print("=" * 70)
+    print()
+    print("Attention is the core innovation of transformers. It allows each token")
+    print("to 'look at' other tokens and decide which ones are relevant.")
+    print()
+    print("Dependencies:")
+    print("  - src.layers (Linear layers for Q, K, V projections)")
+    print("  - src.activations (softmax for attention weights)")
+    print()
+
+    from src.layers import Linear  # Showing the dependency
+
+    # -------------------------------------------------------------------------
+    # THE INTUITION: What is attention?
+    # -------------------------------------------------------------------------
+    print("-" * 70)
+    print("1. THE INTUITION - What problem does attention solve?")
+    print("-" * 70)
+    print()
+    print("Consider: 'The cat sat on the mat because it was tired.'")
+    print()
+    print("When processing 'it', the model needs to figure out what 'it' refers to.")
+    print(
+        "Attention computes: 'How relevant is each previous word to understanding it?'"
+    )
+    print()
+    print("  'The'     -> low relevance")
+    print("  'cat'     -> HIGH relevance (it = the cat)")
+    print("  'sat'     -> medium relevance")
+    print("  'on'      -> low relevance")
+    print("  'the'     -> low relevance")
+    print("  'mat'     -> low relevance")
+    print("  'because' -> medium relevance")
+    print()
+
+    # -------------------------------------------------------------------------
+    # QUERY, KEY, VALUE: The attention mechanism
+    # -------------------------------------------------------------------------
+    print("-" * 70)
+    print("2. QUERY, KEY, VALUE - The three vectors")
+    print("-" * 70)
+    print()
+    print("Each token produces three vectors:")
+    print("  - Query (Q): 'What am I looking for?'")
+    print("  - Key (K):   'What do I contain?'")
+    print("  - Value (V): 'What information do I provide?'")
+    print()
+    print("The attention formula:")
+    print("  Attention(Q, K, V) = softmax(Q @ K.T / sqrt(d_k)) @ V")
+    print()
+    print("Step by step:")
+    print("  1. Q @ K.T = similarity scores (how well does each Q match each K?)")
+    print("  2. / sqrt(d_k) = scale down to prevent extreme values")
+    print("  3. softmax = convert to probabilities (sum to 1)")
+    print("  4. @ V = weighted sum of values")
+    print()
+
+    # Simple example with small dimensions
+    np.random.seed(42)
+    batch_size = 1
+    seq_len = 4
+    d_k = 8  # Small dimension for clarity
+
+    # Create sample Q, K, V (normally these come from linear projections)
+    Q = np.random.randn(batch_size, seq_len, d_k) * 0.5
+    K = np.random.randn(batch_size, seq_len, d_k) * 0.5
+    V = np.random.randn(batch_size, seq_len, d_k) * 0.5
+
+    print(f"Shapes: Q={Q.shape}, K={K.shape}, V={V.shape}")
+    print("  (batch_size=1, sequence_length=4, dimension=8)")
+    print()
+
+    # Compute attention
+    output, attention_weights = scaled_dot_product_attention(Q, K, V)
+
+    print("Attention weights (which tokens each position attends to):")
+    print("  Each row sums to 1.0 (it's a probability distribution)")
+    print()
+    print("         Token0  Token1  Token2  Token3")
+    for i in range(seq_len):
+        weights_str = "  ".join(f"{w:.3f}" for w in attention_weights[0, i])
+        print(f"  Pos {i}:  {weights_str}")
+    print()
+
+    # -------------------------------------------------------------------------
+    # CAUSAL MASKING: Can't look at the future
+    # -------------------------------------------------------------------------
+    print("-" * 70)
+    print("3. CAUSAL MASKING - Preventing cheating")
+    print("-" * 70)
+    print()
+    print("In language modeling, we predict the NEXT token.")
+    print("Position 2 should not see tokens at positions 3, 4, 5...")
+    print("(That would be cheating!)")
+    print()
+
+    mask = create_causal_mask(seq_len)
+    print("Causal mask (True = can attend, False = blocked):")
+    print()
+    print("         Token0  Token1  Token2  Token3")
+    for i in range(seq_len):
+        mask_str = "  ".join("  Y  " if m else "  -  " for m in mask[i])
+        print(f"  Pos {i}:  {mask_str}")
+    print()
+    print("Notice the triangular pattern: each position sees only itself and before.")
+    print()
+
+    # Apply causal mask
+    output_causal, attention_weights_causal = scaled_dot_product_attention(
+        Q, K, V, mask=mask
+    )
+
+    print("Attention weights WITH causal mask:")
+    print()
+    print("         Token0  Token1  Token2  Token3")
+    for i in range(seq_len):
+        weights_str = "  ".join(f"{w:.3f}" for w in attention_weights_causal[0, i])
+        print(f"  Pos {i}:  {weights_str}")
+    print()
+    print("Notice: Position 0 has 1.000 for Token0 (can only see itself)")
+    print("        Position 3 distributes attention across all tokens")
+    print()
+
+    # -------------------------------------------------------------------------
+    # MULTI-HEAD ATTENTION: Multiple perspectives
+    # -------------------------------------------------------------------------
+    print("-" * 70)
+    print("4. MULTI-HEAD ATTENTION - Multiple perspectives")
+    print("-" * 70)
+    print()
+    print("Instead of one attention, we run multiple in parallel ('heads').")
+    print("Each head can learn to focus on different types of relationships:")
+    print("  - Head 1 might learn syntax (subject-verb agreement)")
+    print("  - Head 2 might learn semantics (word meaning relationships)")
+    print("  - Head 3 might learn coreference (what pronouns refer to)")
+    print()
+
+    embedding_dim = 32
+    num_heads = 4
+    mha = MultiHeadAttention(embedding_dimension=embedding_dim, num_heads=num_heads)
+
+    print("Multi-Head Attention:")
+    print(f"  Embedding dimension: {embedding_dim}")
+    print(f"  Number of heads: {num_heads}")
+    print(f"  Head dimension: {mha.head_dimension} (= {embedding_dim} / {num_heads})")
+    print()
+
+    # Forward pass - for self-attention, query=key=value=x
+    x = np.random.randn(batch_size, seq_len, embedding_dim)
+    causal_mask = create_causal_mask(seq_len)
+    output = mha.forward(query=x, key=x, value=x, mask=causal_mask)
+
+    print(f"Input shape: {x.shape}")
+    print(f"Output shape: {output.shape}")
+    print()
+    print("The output has the same shape as input - attention transforms")
+    print("each token's representation based on context from other tokens.")
+    print()
+
+    # -------------------------------------------------------------------------
+    # VISUALIZING ATTENTION PATTERNS
+    # -------------------------------------------------------------------------
+    print("-" * 70)
+    print("5. INSIDE THE MULTI-HEAD ATTENTION")
+    print("-" * 70)
+    print()
+    print("The projections Q, K, V are learned linear transformations:")
+    print(f"  query_projection: Linear({embedding_dim} -> {embedding_dim})")
+    print(f"  key_projection:   Linear({embedding_dim} -> {embedding_dim})")
+    print(f"  value_projection: Linear({embedding_dim} -> {embedding_dim})")
+    print(f"  output_projection: Linear({embedding_dim} -> {embedding_dim})")
+    print()
+
+    total_params = sum(p.size for p in mha.get_parameters().values())
+    print(f"Total parameters in Multi-Head Attention: {total_params:,}")
+    print()
+
+    print("=" * 70)
+    print("SUMMARY")
+    print("=" * 70)
+    print("- Attention lets tokens 'look at' other tokens to gather context")
+    print("- Query/Key/Value: Q asks, K answers, V provides information")
+    print("- Causal mask: Prevents looking at future tokens (for generation)")
+    print("- Multi-head: Multiple attention patterns learned in parallel")
+    print()
+    print("Attention is what makes transformers powerful - it allows modeling")
+    print("long-range dependencies that RNNs struggle with.")
+    print()
+    print("Next step: Run 'python -m src.transformer' to see how attention")
+    print("           combines with feed-forward networks in transformer blocks.")

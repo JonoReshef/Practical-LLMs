@@ -470,3 +470,192 @@ class BPETokenizer:
         tokenizer.eos_token_id = special["eos"]
 
         return tokenizer
+
+
+# =============================================================================
+# EDUCATIONAL DEMO
+# Run with: python -m src.tokenizer
+# =============================================================================
+if __name__ == "__main__":
+    print("=" * 70)
+    print("TOKENIZER DEMO - Converting Text to Numbers")
+    print("=" * 70)
+    print()
+    print("Before a neural network can process text, we must convert it to numbers.")
+    print("This module implements Byte Pair Encoding (BPE), the tokenization method")
+    print("used by GPT, LLaMA, and most modern language models.")
+    print()
+    print("Dependencies: None (this is a foundational module)")
+    print()
+
+    import numpy as np  # Only for demo array conversion
+
+    # -------------------------------------------------------------------------
+    # WHY TOKENIZATION?
+    # -------------------------------------------------------------------------
+    print("-" * 70)
+    print("1. WHY TOKENIZATION? The problem we're solving")
+    print("-" * 70)
+    print()
+    print("Neural networks need numbers, not text. We could:")
+    print("  - Use characters: 'hello' = [h, e, l, l, o] = 5 tokens")
+    print("  - Use whole words: 'hello' = [hello] = 1 token")
+    print()
+    print("Problem with characters: Too many tokens, hard to learn meaning")
+    print("Problem with words: Can't handle new words, huge vocabulary")
+    print()
+    print("Solution: BPE finds a middle ground - common subwords become tokens.")
+    print("  - 'hello' might be ['hel', 'lo'] or just ['hello']")
+    print("  - 'unhappiness' might be ['un', 'happy', 'ness']")
+    print()
+
+    # -------------------------------------------------------------------------
+    # TRAINING THE TOKENIZER
+    # -------------------------------------------------------------------------
+    print("-" * 70)
+    print("2. TRAINING THE TOKENIZER - Learning the vocabulary")
+    print("-" * 70)
+    print()
+
+    # Sample text to train on
+    training_text = """
+    To be or not to be, that is the question.
+    Whether 'tis nobler in the mind to suffer
+    The slings and arrows of outrageous fortune,
+    Or to take arms against a sea of troubles.
+    """
+
+    tokenizer = BPETokenizer()
+    print("Training BPE tokenizer on Shakespeare excerpt...")
+    print(f"Text length: {len(training_text)} characters")
+    print()
+
+    # Train with small vocabulary for demonstration
+    tokenizer.train(training_text, vocabulary_size=60)
+
+    print(f"Vocabulary size: {tokenizer.vocabulary_size}")
+    print()
+    print("Special tokens (always present):")
+    print(f"  <PAD> = {tokenizer.pad_token_id} (for padding sequences)")
+    print(f"  <UNK> = {tokenizer.unk_token_id} (for unknown tokens)")
+    print(f"  <BOS> = {tokenizer.bos_token_id} (beginning of sequence)")
+    print(f"  <EOS> = {tokenizer.eos_token_id} (end of sequence)")
+    print()
+
+    # Show some learned merges
+    print("BPE learns to merge common character pairs:")
+    for i, merge in enumerate(tokenizer.merges[:5]):
+        print(f"  Merge {i + 1}: '{merge[0]}' + '{merge[1]}' -> '{merge[0]}{merge[1]}'")
+    print(f"  ... ({len(tokenizer.merges)} merges total)")
+    print()
+
+    # -------------------------------------------------------------------------
+    # ENCODING: Text to token IDs
+    # -------------------------------------------------------------------------
+    print("-" * 70)
+    print("3. ENCODING - Converting text to token IDs")
+    print("-" * 70)
+    print()
+
+    test_texts = [
+        "to be",
+        "question",
+        "the mind",
+        "hello world",  # Contains 'hello' which wasn't in training text
+    ]
+
+    for text in test_texts:
+        tokens = tokenizer.encode(text)
+        print(f"'{text}'")
+        print(f"  -> Token IDs: {tokens}")
+
+        # Show what each token represents
+        token_strs = [tokenizer.vocabulary.get(t, "<UNK>") for t in tokens]
+        print(f"  -> Tokens: {token_strs}")
+        print()
+
+    # -------------------------------------------------------------------------
+    # DECODING: Token IDs back to text
+    # -------------------------------------------------------------------------
+    print("-" * 70)
+    print("4. DECODING - Converting token IDs back to text")
+    print("-" * 70)
+    print()
+
+    original = "To be or not to be"
+    tokens = tokenizer.encode(original)
+    decoded = tokenizer.decode(tokens)
+
+    print(f"Original: '{original}'")
+    print(f"Encoded:  {tokens}")
+    print(f"Decoded:  '{decoded}'")
+    print()
+    print(
+        "Roundtrip successful!"
+        if original == decoded
+        else "Note: Some normalization may occur"
+    )
+    print()
+
+    # -------------------------------------------------------------------------
+    # HANDLING UNKNOWN TEXT
+    # -------------------------------------------------------------------------
+    print("-" * 70)
+    print("5. HANDLING UNKNOWN TEXT")
+    print("-" * 70)
+    print()
+    print("What happens with text the tokenizer hasn't seen?")
+    print()
+
+    unknown_text = "xyz123"  # Characters likely not in training
+    tokens = tokenizer.encode(unknown_text)
+    print(f"Unknown text: '{unknown_text}'")
+    print(f"Token IDs: {tokens}")
+
+    # Check for UNK tokens
+    unk_count = sum(1 for t in tokens if t == tokenizer.unk_token_id)
+    print(f"UNK tokens: {unk_count}")
+    print()
+    print("BPE handles this gracefully by falling back to character-level,")
+    print("only using <UNK> for truly unknown characters.")
+    print()
+
+    # -------------------------------------------------------------------------
+    # BATCH PROCESSING
+    # -------------------------------------------------------------------------
+    print("-" * 70)
+    print("6. BATCH PROCESSING - Multiple texts at once")
+    print("-" * 70)
+    print()
+    print("For training, we process multiple texts in batches.")
+    print("Texts have different lengths, so we pad shorter ones.")
+    print()
+
+    texts = ["to be", "or not to be", "that is the question"]
+    batch = tokenizer.batch_encode(texts, padding=True, max_length=15)
+    batch_array = np.array(batch)  # Convert to numpy for shape
+
+    print("Input texts:")
+    for t in texts:
+        print(f"  '{t}'")
+    print()
+    print(f"Batch shape: {batch_array.shape} (3 texts, max tokens)")
+    print()
+    print("Padded batch (0 = PAD token):")
+    for i, (text, row) in enumerate(zip(texts, batch)):
+        print(f"  {i}: {row}")
+    print()
+
+    print("=" * 70)
+    print("SUMMARY")
+    print("=" * 70)
+    print("- Tokenization converts text to numbers that neural networks can process")
+    print("- BPE learns a vocabulary of subwords from training data")
+    print("- encode() converts text to token IDs")
+    print("- decode() converts token IDs back to text")
+    print("- batch_encode() handles multiple texts with padding")
+    print()
+    print("The tokenizer is the FIRST step in any LLM pipeline.")
+    print()
+    print("Next step: Run 'python -m src.attention' to see how the model")
+    print("           processes these token embeddings with attention.")

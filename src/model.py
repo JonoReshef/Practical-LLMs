@@ -490,3 +490,283 @@ def cross_entropy_loss_backward(
         grad = grad / (batch_size * seq_len)
 
     return grad
+
+
+# =============================================================================
+# EDUCATIONAL DEMO
+# Run with: python -m src.model
+# =============================================================================
+if __name__ == "__main__":
+    print("=" * 70)
+    print("GPT MODEL DEMO - The Complete Language Model")
+    print("=" * 70)
+    print()
+    print("This module assembles all components into a complete GPT model")
+    print("that can be trained to generate text.")
+    print()
+    print("Dependencies (everything comes together here):")
+    print("  - src.layers (Embedding, PositionalEncoding, Linear, LayerNorm)")
+    print("  - src.transformer (TransformerStack)")
+    print("  - src.attention (used by transformer)")
+    print("  - src.activations (used by transformer)")
+    print()
+
+    # -------------------------------------------------------------------------
+    # MODEL CONFIGURATION
+    # -------------------------------------------------------------------------
+    print("-" * 70)
+    print("1. MODEL CONFIGURATION")
+    print("-" * 70)
+    print()
+    print("GPTConfig defines all hyperparameters:")
+    print()
+
+    config = GPTConfig(
+        vocab_size=1000,
+        embedding_dim=128,
+        num_heads=4,
+        num_layers=4,
+        ffn_hidden_dim=512,
+        max_sequence_length=64,
+    )
+
+    print(f"  vocab_size: {config.vocab_size}")
+    print("    - Number of unique tokens the model knows")
+    print()
+    print(f"  embedding_dim: {config.embedding_dim}")
+    print("    - Size of vector representing each token")
+    print()
+    print(f"  num_heads: {config.num_heads}")
+    print("    - Parallel attention patterns")
+    print()
+    print(f"  num_layers: {config.num_layers}")
+    print("    - Depth of the model (transformer blocks)")
+    print()
+    print(f"  ffn_hidden_dim: {config.ffn_hidden_dim}")
+    print("    - Width of feed-forward networks")
+    print()
+    print(f"  max_sequence_length: {config.max_sequence_length}")
+    print("    - Maximum context window")
+    print()
+
+    # -------------------------------------------------------------------------
+    # MODEL CREATION
+    # -------------------------------------------------------------------------
+    print("-" * 70)
+    print("2. MODEL ARCHITECTURE")
+    print("-" * 70)
+    print()
+
+    model = GPTModel(config)
+
+    print("GPT Architecture:")
+    print()
+    print("  Token IDs")
+    print("      |")
+    print("      v")
+    print(
+        f"  [Embedding]  ({config.vocab_size} tokens -> {config.embedding_dim}d vectors)"
+    )
+    print("      |")
+    print("      v")
+    print("  [+ PositionalEncoding]  (adds position information)")
+    print("      |")
+    print("      v")
+    print(f"  [TransformerBlock x {config.num_layers}]")
+    print(f"    - {config.num_heads}-head attention")
+    print(
+        f"    - FFN ({config.embedding_dim} -> {config.ffn_hidden_dim} -> {config.embedding_dim})"
+    )
+    print("      |")
+    print("      v")
+    print("  [LayerNorm]  (final normalization)")
+    print("      |")
+    print("      v")
+    print(
+        f"  [Output Projection]  ({config.embedding_dim}d -> {config.vocab_size} logits)"
+    )
+    print("      |")
+    print("      v")
+    print("  Logits (scores for next token)")
+    print()
+
+    # Count parameters
+    params = model.get_parameters()
+    total_params = sum(p.size for p in params.values())
+    print(f"Total parameters: {total_params:,}")
+    print()
+
+    # Parameter breakdown
+    embedding_params = params["token_embedding.weight"].size
+    transformer_params = sum(
+        p.size for k, p in params.items() if k.startswith("transformer_stack")
+    )
+    output_params = (
+        params["final_layer_norm.gamma"].size
+        + params["final_layer_norm.beta"].size
+        + params["output_projection.weight"].size
+        + params["output_projection.bias"].size
+    )
+
+    print("Parameter breakdown:")
+    print(
+        f"  Token embedding: {embedding_params:,} ({100 * embedding_params / total_params:.1f}%)"
+    )
+    print(
+        f"  Transformer layers: {transformer_params:,} ({100 * transformer_params / total_params:.1f}%)"
+    )
+    print(
+        f"  Output (norm + projection): {output_params:,} ({100 * output_params / total_params:.1f}%)"
+    )
+    print()
+
+    # -------------------------------------------------------------------------
+    # FORWARD PASS: Prediction
+    # -------------------------------------------------------------------------
+    print("-" * 70)
+    print("3. FORWARD PASS - Making predictions")
+    print("-" * 70)
+    print()
+
+    # Create sample input
+    np.random.seed(42)
+    batch_size = 2
+    seq_len = 8
+    input_tokens = np.random.randint(0, config.vocab_size, (batch_size, seq_len))
+
+    print(f"Input shape: {input_tokens.shape} (batch={batch_size}, seq_len={seq_len})")
+    print(f"Sample tokens: {input_tokens[0]}")
+    print()
+
+    # Forward pass
+    logits = model.forward(input_tokens)
+    print(f"Output logits shape: {logits.shape}")
+    print(f"  - batch_size: {logits.shape[0]}")
+    print(f"  - seq_len: {logits.shape[1]}")
+    print(f"  - vocab_size: {logits.shape[2]}")
+    print()
+    print("Each position outputs a score for every possible next token.")
+    print()
+
+    # Show prediction at last position
+    last_logits = logits[0, -1, :]  # First batch, last position
+    probs = softmax(last_logits)
+    top_5_indices = np.argsort(probs)[-5:][::-1]
+
+    print("Top 5 predicted next tokens (position 7):")
+    for idx in top_5_indices:
+        print(f"  Token {idx}: {probs[idx]:.4f} ({100 * probs[idx]:.2f}%)")
+    print()
+
+    # -------------------------------------------------------------------------
+    # LOSS COMPUTATION: Measuring error
+    # -------------------------------------------------------------------------
+    print("-" * 70)
+    print("4. LOSS COMPUTATION - How wrong are we?")
+    print("-" * 70)
+    print()
+    print("Cross-entropy loss measures prediction quality:")
+    print("  - Low loss: model assigned high probability to correct token")
+    print("  - High loss: model assigned low probability to correct token")
+    print()
+
+    # Create target (shifted by 1 for language modeling)
+    targets = np.random.randint(0, config.vocab_size, (batch_size, seq_len))
+
+    loss = cross_entropy_loss(logits, targets)
+    print(f"Cross-entropy loss: {loss:.4f}")
+    print()
+
+    # Expected loss for random model
+    random_loss = -np.log(1.0 / config.vocab_size)
+    print(f"Random model would have loss: {random_loss:.4f}")
+    print(f"  (uniform probability = 1/{config.vocab_size})")
+    print()
+    print("As training progresses, loss should decrease.")
+    print()
+
+    # -------------------------------------------------------------------------
+    # BACKWARD PASS: Learning
+    # -------------------------------------------------------------------------
+    print("-" * 70)
+    print("5. BACKWARD PASS - Computing gradients")
+    print("-" * 70)
+    print()
+    print("Backpropagation computes how each parameter should change")
+    print("to reduce the loss.")
+    print()
+
+    # Compute gradients
+    grad_logits = cross_entropy_loss_backward(logits, targets)
+    gradients = model.backward(grad_logits)
+
+    print(f"Number of gradient tensors: {len(gradients)}")
+    print()
+    print("Sample gradients:")
+    for name in list(gradients.keys())[:4]:
+        grad = gradients[name]
+        grad_norm = np.sqrt(np.sum(grad**2))
+        print(f"  {name}: shape={grad.shape}, norm={grad_norm:.6f}")
+    print("  ...")
+    print()
+
+    # -------------------------------------------------------------------------
+    # TEXT GENERATION: Creating output
+    # -------------------------------------------------------------------------
+    print("-" * 70)
+    print("6. TEXT GENERATION - Autoregressive decoding")
+    print("-" * 70)
+    print()
+    print("To generate text, we predict one token at a time:")
+    print("  1. Input: [token_1, token_2, token_3]")
+    print("  2. Model predicts distribution over next token")
+    print("  3. Sample from distribution -> token_4")
+    print("  4. Input: [token_1, token_2, token_3, token_4]")
+    print("  5. Repeat...")
+    print()
+
+    # Generate some tokens
+    prompt = np.array([[42, 100, 256]])  # Some seed tokens
+    print(f"Prompt tokens: {prompt[0]}")
+    print()
+
+    generated = model.generate(prompt, max_new_tokens=10, temperature=1.0, top_k=50)
+
+    print(f"Generated sequence: {generated[0]}")
+    print(
+        f"  (original {len(prompt[0])} + {len(generated[0]) - len(prompt[0])} new tokens)"
+    )
+    print()
+
+    # Show effect of temperature
+    print("Effect of temperature on generation:")
+    for temp in [0.5, 1.0, 1.5]:
+        np.random.seed(123)  # Same seed for comparison
+        gen = model.generate(prompt.copy(), max_new_tokens=5, temperature=temp)
+        print(f"  temp={temp}: {gen[0]}")
+    print()
+    print("Lower temperature = more deterministic (picks highest probability)")
+    print("Higher temperature = more random (samples more evenly)")
+    print()
+
+    print("=" * 70)
+    print("SUMMARY")
+    print("=" * 70)
+    print("The GPT model:")
+    print("  1. Embeds input tokens into vectors")
+    print("  2. Adds positional information")
+    print("  3. Processes through transformer blocks (attention + FFN)")
+    print("  4. Projects to vocabulary size for next-token prediction")
+    print()
+    print("Training:")
+    print("  - Forward pass: predict next tokens")
+    print("  - Loss: measure prediction error")
+    print("  - Backward pass: compute gradients")
+    print("  - Optimizer step: update weights")
+    print()
+    print("Generation:")
+    print("  - Autoregressive: predict one token, append, repeat")
+    print("  - Temperature and top-k control randomness")
+    print()
+    print("Next step: Run 'python -m src.lora' to see parameter-efficient")
+    print("           fine-tuning with LoRA adapters.")

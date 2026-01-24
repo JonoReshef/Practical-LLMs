@@ -462,3 +462,249 @@ def count_lora_parameters(model: GPTModel) -> int:
 def count_total_parameters(model: GPTModel) -> int:
     """Count total parameters in the model."""
     return sum(p.size for p in model.get_parameters().values())
+
+
+# =============================================================================
+# EDUCATIONAL DEMO
+# Run with: python -m src.lora
+# =============================================================================
+if __name__ == "__main__":
+    print("=" * 70)
+    print("LoRA DEMO - Parameter-Efficient Fine-Tuning")
+    print("=" * 70)
+    print()
+    print("LoRA (Low-Rank Adaptation) allows fine-tuning large models by training")
+    print("only a tiny fraction of parameters. This makes it feasible to adapt")
+    print("models on limited hardware.")
+    print()
+    print("Dependencies:")
+    print("  - src.model (GPTModel to adapt)")
+    print("  - src.layers (Linear layer that LoRA wraps)")
+    print()
+
+    from src.model import GPTConfig, GPTModel
+
+    # -------------------------------------------------------------------------
+    # THE PROBLEM: Full fine-tuning is expensive
+    # -------------------------------------------------------------------------
+    print("-" * 70)
+    print("1. THE PROBLEM - Full fine-tuning is expensive")
+    print("-" * 70)
+    print()
+    print("When fine-tuning, we typically update ALL model parameters.")
+    print("For large models, this means:")
+    print("  - Storing optimizer state for billions of parameters")
+    print("  - Risk of 'catastrophic forgetting' of pre-trained knowledge")
+    print("  - Need separate copy of weights for each fine-tuned version")
+    print()
+
+    config = GPTConfig(
+        vocab_size=1000,
+        embedding_dim=128,
+        num_heads=4,
+        num_layers=4,
+        ffn_hidden_dim=512,
+        max_sequence_length=64,
+    )
+    model = GPTModel(config)
+
+    total_params = count_total_parameters(model)
+    print(f"Our model has {total_params:,} parameters")
+    print("Full fine-tuning would update ALL of them.")
+    print()
+
+    # -------------------------------------------------------------------------
+    # THE SOLUTION: Low-Rank Adaptation
+    # -------------------------------------------------------------------------
+    print("-" * 70)
+    print("2. THE SOLUTION - Low-Rank Adaptation (LoRA)")
+    print("-" * 70)
+    print()
+    print("Key insight: The weight changes during fine-tuning are 'low-rank'.")
+    print("We don't need to modify every weight - just certain directions.")
+    print()
+    print("Instead of learning full weight update deltaW:")
+    print("  W_new = W_original + deltaW")
+    print()
+    print("We learn two small matrices B and A:")
+    print("  W_new = W_original + B @ A")
+    print()
+    print("Where:")
+    print("  - W_original: (d_out, d_in) - FROZEN, not trained")
+    print("  - B: (d_out, r) - TRAINABLE, small")
+    print("  - A: (r, d_in) - TRAINABLE, small")
+    print("  - r: 'rank', typically 4-16 (much smaller than d)")
+    print()
+    print("Visual for d_in=128, d_out=128, r=4:")
+    print()
+    print("  Original W:    128 x 128 = 16,384 parameters (frozen)")
+    print("  LoRA B:        128 x 4   =    512 parameters (trained)")
+    print("  LoRA A:          4 x 128 =    512 parameters (trained)")
+    print("  Total trainable:          1,024 parameters")
+    print("  Reduction: 16x fewer parameters!")
+    print()
+
+    # -------------------------------------------------------------------------
+    # LORA IN ACTION
+    # -------------------------------------------------------------------------
+    print("-" * 70)
+    print("3. APPLYING LoRA TO A MODEL")
+    print("-" * 70)
+    print()
+
+    # Apply LoRA to query and value projections (common choice)
+    rank = 4
+    alpha = 8
+    target_modules = ["query", "value"]
+
+    print("LoRA configuration:")
+    print(f"  rank: {rank} (bottleneck dimension)")
+    print(f"  alpha: {alpha} (scaling factor)")
+    print(f"  target_modules: {target_modules}")
+    print()
+
+    model = apply_lora_to_model(
+        model, rank=rank, alpha=alpha, target_modules=target_modules
+    )
+
+    lora_params = count_lora_parameters(model)
+    print("After applying LoRA:")
+    print(f"  Total model parameters: {total_params:,}")
+    print(f"  Trainable (LoRA) parameters: {lora_params:,}")
+    print(f"  Percentage trainable: {100 * lora_params / total_params:.2f}%")
+    print(f"  Parameter reduction: {total_params / lora_params:.1f}x fewer!")
+    print()
+
+    # -------------------------------------------------------------------------
+    # HOW LORA FORWARD WORKS
+    # -------------------------------------------------------------------------
+    print("-" * 70)
+    print("4. HOW LoRA FORWARD PASS WORKS")
+    print("-" * 70)
+    print()
+    print("During forward pass, LoRA adds its contribution to the frozen weights:")
+    print()
+    print("  output = x @ W_frozen.T + x @ A.T @ B.T * (alpha/rank)")
+    print("         = original_output + lora_contribution")
+    print()
+    print("The scaling factor (alpha/rank) keeps magnitude stable across ranks.")
+    print()
+
+    # Demonstrate with a single LoRA layer
+    input_dim = 64
+    output_dim = 64
+
+    lora_layer = LoRALinear(
+        input_features=input_dim, output_features=output_dim, rank=4, alpha=8.0
+    )
+
+    print("LoRALinear layer:")
+    print(f"  Base weights: {lora_layer.base_weights.shape} (frozen)")
+    print(f"  LoRA A: {lora_layer.lora_A.shape} (trainable)")
+    print(f"  LoRA B: {lora_layer.lora_B.shape} (trainable)")
+    print(f"  Scaling: {lora_layer.scaling} = {lora_layer.alpha}/{lora_layer.rank}")
+    print()
+
+    # Show that B is initialized to zeros
+    print("Initialization:")
+    print(f"  B is zeros: {np.allclose(lora_layer.lora_B, 0)}")
+    print(f"  A is random: {not np.allclose(lora_layer.lora_A, 0)}")
+    print()
+    print("Why B=0? At initialization, LoRA contribution is zero,")
+    print("so the model behaves exactly like the original!")
+    print()
+
+    # -------------------------------------------------------------------------
+    # TRAINING ONLY LORA PARAMETERS
+    # -------------------------------------------------------------------------
+    print("-" * 70)
+    print("5. TRAINING ONLY LoRA PARAMETERS")
+    print("-" * 70)
+    print()
+    print("During fine-tuning, we only update LoRA parameters:")
+    print()
+
+    # Forward pass
+    np.random.seed(42)
+    x = np.random.randn(2, 4, config.embedding_dim)  # (batch, seq, dim)
+    output = model.forward(
+        x.astype(np.int64)[:, :, 0].astype(np.int64) % config.vocab_size
+    )
+    print(f"Forward pass works: output shape = {output.shape}")
+    print()
+
+    # Get only LoRA gradients
+    lora_param_dict = get_lora_parameters(model)
+    print("LoRA parameters to train:")
+    for name, param in list(lora_param_dict.items())[:4]:
+        print(f"  {name}: {param.shape}")
+    print(f"  ... ({len(lora_param_dict)} total)")
+    print()
+
+    # -------------------------------------------------------------------------
+    # MERGING FOR INFERENCE
+    # -------------------------------------------------------------------------
+    print("-" * 70)
+    print("6. MERGING FOR INFERENCE")
+    print("-" * 70)
+    print()
+    print("After fine-tuning, LoRA can be merged into base weights:")
+    print("  W_merged = W_original + B @ A * scaling")
+    print()
+    print("Benefits of merging:")
+    print("  - No inference overhead (same speed as original model)")
+    print("  - Single set of weights to deploy")
+    print()
+    print("Benefits of keeping separate:")
+    print("  - Can swap different LoRA adapters on same base model")
+    print("  - Task A adapter, Task B adapter, etc.")
+    print()
+
+    # Demonstrate merging
+    base_weights = np.random.randn(64, 64)
+    lora_A = np.random.randn(4, 64) * 0.1
+    lora_B = np.random.randn(64, 4) * 0.1
+    scaling = 2.0
+
+    merged = merge_lora_weights(base_weights, lora_A, lora_B, scaling)
+    print(f"Base weights shape: {base_weights.shape}")
+    print(f"Merged weights shape: {merged.shape}")
+    print()
+
+    # Show the difference
+    diff = merged - base_weights
+    print(f"Weight change (Frobenius norm): {np.linalg.norm(diff):.4f}")
+    print("(The fine-tuning adjustment is captured in the merged weights)")
+    print()
+
+    # -------------------------------------------------------------------------
+    # COMPARISON TABLE
+    # -------------------------------------------------------------------------
+    print("-" * 70)
+    print("7. COMPARISON: Full Fine-tuning vs LoRA")
+    print("-" * 70)
+    print()
+    print("                      | Full Fine-tuning |    LoRA")
+    print("  --------------------|------------------|----------------")
+    print(f"  Trainable params    | {total_params:>14,} | {lora_params:>14,}")
+    print(f"  Memory for training | {'High':>14} | {'Low':>14}")
+    print(f"  Forgetting risk     | {'High':>14} | {'Low':>14}")
+    print(f"  Multiple adapters   | {'Hard':>14} | {'Easy':>14}")
+    print(f"  Inference overhead  | {'None':>14} | {'None*':>14}")
+    print()
+    print("  *None if merged, small if kept separate")
+    print()
+
+    print("=" * 70)
+    print("SUMMARY")
+    print("=" * 70)
+    print("- LoRA freezes pre-trained weights and adds small trainable matrices")
+    print("- Reduces trainable parameters by 10-100x")
+    print("- Key equation: W_new = W_frozen + B @ A * (alpha/rank)")
+    print("- Can merge for deployment or keep separate for adapter swapping")
+    print("- Standard practice: Apply to query and value projections in attention")
+    print()
+    print("LoRA enables fine-tuning large models on consumer hardware!")
+    print()
+    print("Next step: Run 'python -m src.utils' to see data loading and")
+    print("           checkpointing utilities for training.")

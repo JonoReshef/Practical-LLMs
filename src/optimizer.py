@@ -272,3 +272,216 @@ def get_learning_rate_with_warmup(
     )
 
     return learning_rate
+
+
+# =============================================================================
+# EDUCATIONAL DEMO
+# Run with: python -m src.optimizer
+# =============================================================================
+if __name__ == "__main__":
+    print("=" * 70)
+    print("OPTIMIZER AND LEARNING RATE DEMO")
+    print("=" * 70)
+    print()
+    print("The optimizer updates model weights using gradients computed during")
+    print("backpropagation. This is how the model learns.")
+    print()
+    print("Dependencies: None (this is a foundational module)")
+    print()
+
+    # -------------------------------------------------------------------------
+    # THE LEARNING PROCESS
+    # -------------------------------------------------------------------------
+    print("-" * 70)
+    print("1. THE LEARNING PROCESS - Gradient descent")
+    print("-" * 70)
+    print()
+    print("Training loop:")
+    print("  1. Forward pass: compute predictions")
+    print("  2. Loss: measure how wrong predictions are")
+    print("  3. Backward pass: compute gradients (how to adjust weights)")
+    print("  4. Optimizer step: update weights using gradients")
+    print()
+    print("The optimizer does step 4. Let's see how.")
+    print()
+
+    # -------------------------------------------------------------------------
+    # TOY EXAMPLE: Optimizing a simple function
+    # -------------------------------------------------------------------------
+    print("-" * 70)
+    print("2. TOY EXAMPLE - Minimizing a simple function")
+    print("-" * 70)
+    print()
+    print("Let's minimize f(x) = (x - 3)^2 starting from x = 10")
+    print("Minimum is at x = 3 where f(x) = 0")
+    print()
+
+    # Initialize
+    x = np.array([10.0])
+    optimizer = AdamW(learning_rate=0.5)
+    optimizer.initialize({"x": x})
+
+    print("Step |    x    | f(x) = (x-3)^2 | gradient")
+    print("-----|---------|----------------|----------")
+
+    for step in range(10):
+        # Compute loss and gradient
+        loss = (x - 3) ** 2
+        gradient = 2 * (x - 3)  # d/dx of (x-3)^2
+
+        print(f"  {step}  | {x[0]:7.3f} | {loss[0]:14.4f} | {gradient[0]:8.3f}")
+
+        # Optimizer step
+        optimizer.step({"x": gradient}, learning_rate=0.5)
+
+    print()
+    print(f"Final x = {x[0]:.4f} (target was 3.0)")
+    print()
+
+    # -------------------------------------------------------------------------
+    # ADAMW: The modern optimizer
+    # -------------------------------------------------------------------------
+    print("-" * 70)
+    print("3. ADAMW - Adaptive Moment Estimation with Weight Decay")
+    print("-" * 70)
+    print()
+    print("AdamW improves on basic gradient descent with:")
+    print()
+    print("1. MOMENTUM (first moment):")
+    print("   - Keeps a running average of gradient direction")
+    print("   - Helps push through flat regions and local minima")
+    print("   - Like a ball rolling downhill with inertia")
+    print()
+    print("2. ADAPTIVE LEARNING RATE (second moment):")
+    print("   - Tracks variance of gradients per parameter")
+    print("   - Parameters with large gradients get smaller updates")
+    print("   - Parameters with small gradients get larger updates")
+    print()
+    print("3. WEIGHT DECAY (regularization):")
+    print("   - Slightly shrinks weights each step")
+    print("   - Prevents overfitting by keeping weights small")
+    print()
+
+    # Show AdamW hyperparameters
+    optimizer = AdamW(
+        learning_rate=3e-4,
+        beta1=0.9,  # Momentum decay
+        beta2=0.999,  # Adaptive LR decay
+        epsilon=1e-8,  # Numerical stability
+        weight_decay=0.01,
+    )
+
+    print("Typical AdamW hyperparameters for LLMs:")
+    print(f"  learning_rate: {optimizer.learning_rate} (peak LR)")
+    print(f"  beta1: {optimizer.beta1} (momentum decay)")
+    print(f"  beta2: {optimizer.beta2} (adaptive LR decay)")
+    print(f"  epsilon: {optimizer.epsilon} (numerical stability)")
+    print(f"  weight_decay: {optimizer.weight_decay} (regularization)")
+    print()
+
+    # -------------------------------------------------------------------------
+    # GRADIENT CLIPPING: Preventing explosions
+    # -------------------------------------------------------------------------
+    print("-" * 70)
+    print("4. GRADIENT CLIPPING - Preventing gradient explosion")
+    print("-" * 70)
+    print()
+    print("Sometimes gradients become very large, causing unstable training.")
+    print("Gradient clipping rescales gradients if their norm exceeds a threshold.")
+    print()
+
+    # Simulate large gradients
+    large_gradients = {
+        "layer1": np.array([100.0, 200.0, -150.0]),
+        "layer2": np.array([50.0, -80.0]),
+    }
+
+    total_norm_before = np.sqrt(sum(np.sum(g**2) for g in large_gradients.values()))
+    print("Before clipping:")
+    print(f"  Gradient norm: {total_norm_before:.2f}")
+    for name, grad in large_gradients.items():
+        print(f"  {name}: {grad}")
+    print()
+
+    # Clip gradients
+    max_norm = 1.0
+    clipped_gradients = clip_gradient_norm(large_gradients, max_norm=max_norm)
+
+    total_norm_after = np.sqrt(sum(np.sum(g**2) for g in clipped_gradients.values()))
+    print(f"After clipping (max_norm={max_norm}):")
+    print(f"  Gradient norm: {total_norm_after:.2f}")
+    for name, grad in clipped_gradients.items():
+        print(f"  {name}: {grad.round(4)}")
+    print()
+    print("Notice: Direction preserved, magnitude reduced.")
+    print()
+
+    # -------------------------------------------------------------------------
+    # LEARNING RATE SCHEDULE: Warmup and decay
+    # -------------------------------------------------------------------------
+    print("-" * 70)
+    print("5. LEARNING RATE SCHEDULE - Warmup and cosine decay")
+    print("-" * 70)
+    print()
+    print("The learning rate changes during training:")
+    print()
+    print("1. WARMUP (first N steps):")
+    print("   - Start with tiny LR, gradually increase")
+    print("   - At step 0, weights are random - big updates are bad")
+    print("   - Let the model 'warm up' before making big changes")
+    print()
+    print("2. COSINE DECAY (after warmup):")
+    print("   - Gradually decrease LR following a cosine curve")
+    print("   - Early: big steps to learn major patterns")
+    print("   - Late: small steps to fine-tune")
+    print()
+
+    base_lr = 3e-4
+    warmup_steps = 100
+    total_steps = 1000
+    min_lr = base_lr / 10
+
+    print("Schedule parameters:")
+    print(f"  Base LR: {base_lr}")
+    print(f"  Min LR: {min_lr}")
+    print(f"  Warmup steps: {warmup_steps}")
+    print(f"  Total steps: {total_steps}")
+    print()
+
+    # Show LR at different points
+    print("Learning rate over training:")
+    print()
+    checkpoints = [0, 25, 50, 75, 100, 250, 500, 750, 1000]
+    print("  Step  |   LR      | Phase")
+    print("--------|-----------|--------")
+    for step in checkpoints:
+        lr = get_learning_rate_with_warmup(
+            step, base_lr, warmup_steps, total_steps, min_lr
+        )
+        phase = "warmup" if step < warmup_steps else "decay"
+        print(f"  {step:4d}  | {lr:.2e} | {phase}")
+    print()
+
+    # ASCII visualization
+    print("Visual (normalized, * = learning rate):")
+    print()
+    for step in range(0, total_steps + 1, 50):
+        lr = get_learning_rate_with_warmup(
+            step, base_lr, warmup_steps, total_steps, min_lr
+        )
+        bar_length = int(lr / base_lr * 40)
+        print(f"  {step:4d} |{'*' * bar_length}")
+    print()
+
+    print("=" * 70)
+    print("SUMMARY")
+    print("=" * 70)
+    print("- AdamW: Optimizer with momentum, adaptive LR, and weight decay")
+    print("- Gradient clipping: Prevents gradient explosion")
+    print("- Warmup: Start with small LR while model is random")
+    print("- Cosine decay: Gradually reduce LR for fine-tuning")
+    print()
+    print("These techniques are crucial for stable LLM training.")
+    print()
+    print("Next step: Run 'python -m src.model' to see the complete GPT model")
+    print("           that combines all these components.")

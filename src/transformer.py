@@ -552,3 +552,249 @@ class TransformerStack:
             block_grads = block.get_gradients()
             grads.update({f"block_{i}_{k}": v for k, v in block_grads.items()})
         return grads
+
+
+# =============================================================================
+# EDUCATIONAL DEMO
+# Run with: python -m src.transformer
+# =============================================================================
+if __name__ == "__main__":
+    print("=" * 70)
+    print("TRANSFORMER ARCHITECTURE DEMO")
+    print("=" * 70)
+    print()
+    print("The transformer combines attention with feed-forward networks into")
+    print("'blocks' that are stacked to create deep models.")
+    print()
+    print("Dependencies:")
+    print("  - src.attention (Multi-Head Attention)")
+    print("  - src.layers (Linear, LayerNorm)")
+    print("  - src.activations (GELU)")
+    print()
+
+    from src.attention import create_causal_mask
+
+    # -------------------------------------------------------------------------
+    # FEED-FORWARD NETWORK: Processing each position
+    # -------------------------------------------------------------------------
+    print("-" * 70)
+    print("1. FEED-FORWARD NETWORK - Per-position processing")
+    print("-" * 70)
+    print()
+    print("After attention gathers context, FFN processes each position:")
+    print("  FFN(x) = GELU(x @ W1 + b1) @ W2 + b2")
+    print()
+    print("Structure:")
+    print("  Input (128 dim) -> Expand (512 dim) -> GELU -> Contract (128 dim)")
+    print()
+
+    embedding_dim = 128
+    ffn_hidden_dim = 512
+
+    ffn = FeedForwardNetwork(
+        embedding_dimension=embedding_dim, hidden_dimension=ffn_hidden_dim
+    )
+
+    print("FFN Configuration:")
+    print(f"  Input dimension: {embedding_dim}")
+    print(f"  Hidden dimension: {ffn_hidden_dim} (4x expansion)")
+    print(f"  Output dimension: {embedding_dim}")
+    print()
+
+    ffn_params = ffn.get_parameters()
+    total_ffn_params = sum(p.size for p in ffn_params.values())
+    print(f"FFN Parameters: {total_ffn_params:,}")
+    print(f"  Layer 1 (expand):   {ffn_params['ffn_linear1_weight'].shape}")
+    print(f"  Layer 2 (contract): {ffn_params['ffn_linear2_weight'].shape}")
+    print()
+
+    # Demo forward pass
+    np.random.seed(42)
+    batch_size = 2
+    seq_len = 4
+    x = np.random.randn(batch_size, seq_len, embedding_dim)
+
+    ffn_output = ffn.forward(x)
+    print(f"Input shape:  {x.shape}")
+    print(f"Output shape: {ffn_output.shape} (same as input)")
+    print()
+    print("The FFN is where much of the model's 'knowledge' is stored.")
+    print("It's also the most parameter-heavy component.")
+    print()
+
+    # -------------------------------------------------------------------------
+    # TRANSFORMER BLOCK: The building unit
+    # -------------------------------------------------------------------------
+    print("-" * 70)
+    print("2. TRANSFORMER BLOCK - Attention + FFN + Residuals")
+    print("-" * 70)
+    print()
+    print("A transformer block combines:")
+    print("  1. LayerNorm")
+    print("  2. Multi-Head Attention")
+    print("  3. Residual connection (add input back)")
+    print("  4. LayerNorm")
+    print("  5. Feed-Forward Network")
+    print("  6. Residual connection (add input back)")
+    print()
+    print("Data flow:")
+    print()
+    print("    x ─────────────────────────────┐")
+    print("    │                              │")
+    print("    ▼                              │")
+    print("  LayerNorm                        │")
+    print("    │                              │")
+    print("    ▼                              │")
+    print("  Multi-Head Attention             │")
+    print("    │                              │")
+    print("    ▼                              │")
+    print("  (+)◄─────────────────────────────┘  <- Residual")
+    print("    │")
+    print("    ├─────────────────────────────┐")
+    print("    │                             │")
+    print("    ▼                             │")
+    print("  LayerNorm                       │")
+    print("    │                             │")
+    print("    ▼                             │")
+    print("  Feed-Forward                    │")
+    print("    │                             │")
+    print("    ▼                             │")
+    print("  (+)◄────────────────────────────┘  <- Residual")
+    print("    │")
+    print("    ▼")
+    print("  output")
+    print()
+
+    num_heads = 4
+    block = TransformerBlock(
+        embedding_dimension=embedding_dim,
+        num_heads=num_heads,
+        ffn_hidden_dimension=ffn_hidden_dim,
+    )
+
+    print("Transformer Block Configuration:")
+    print(f"  Embedding dimension: {embedding_dim}")
+    print(f"  Attention heads: {num_heads}")
+    print(f"  Head dimension: {embedding_dim // num_heads}")
+    print(f"  FFN hidden dimension: {ffn_hidden_dim}")
+    print()
+
+    block_params = block.get_parameters()
+    total_block_params = sum(p.size for p in block_params.values())
+    print(f"Total parameters per block: {total_block_params:,}")
+    print()
+
+    # Components breakdown
+    attention_params = sum(p.size for k, p in block_params.items() if "attention" in k)
+    ffn_params_count = sum(p.size for k, p in block_params.items() if "ffn" in k)
+    norm_params = sum(p.size for k, p in block_params.items() if "norm" in k)
+    print("Parameter breakdown:")
+    print(
+        f"  Attention: {attention_params:,} ({100 * attention_params / total_block_params:.1f}%)"
+    )
+    print(
+        f"  FFN:       {ffn_params_count:,} ({100 * ffn_params_count / total_block_params:.1f}%)"
+    )
+    print(
+        f"  LayerNorm: {norm_params:,} ({100 * norm_params / total_block_params:.1f}%)"
+    )
+    print()
+
+    # Forward pass with causal mask
+    mask = create_causal_mask(seq_len)
+    block_output = block.forward(x, use_causal_mask=True, attention_mask=mask)
+    print(f"Input shape:  {x.shape}")
+    print(f"Output shape: {block_output.shape}")
+    print()
+
+    # -------------------------------------------------------------------------
+    # RESIDUAL CONNECTIONS: Why they matter
+    # -------------------------------------------------------------------------
+    print("-" * 70)
+    print("3. RESIDUAL CONNECTIONS - Training stability")
+    print("-" * 70)
+    print()
+    print("Residual connections add the input back to the output:")
+    print("  output = layer(x) + x")
+    print()
+    print("Why this is crucial:")
+    print("  1. Gradients can flow directly through the '+' during backprop")
+    print("  2. The model can learn to 'skip' a layer if not useful")
+    print("  3. Enables training very deep networks (100+ layers)")
+    print()
+    print("Without residuals, gradients vanish in deep networks and training fails.")
+    print()
+
+    # -------------------------------------------------------------------------
+    # TRANSFORMER STACK: Multiple blocks
+    # -------------------------------------------------------------------------
+    print("-" * 70)
+    print("4. TRANSFORMER STACK - Stacking blocks")
+    print("-" * 70)
+    print()
+    print("A full transformer stacks multiple blocks. Each layer refines")
+    print("the representation:")
+    print("  - Early layers: basic patterns, syntax")
+    print("  - Middle layers: semantic relationships")
+    print("  - Later layers: task-specific processing")
+    print()
+
+    num_layers = 4
+    stack = TransformerStack(
+        num_layers=num_layers,
+        embedding_dimension=embedding_dim,
+        num_heads=num_heads,
+        ffn_hidden_dimension=ffn_hidden_dim,
+    )
+
+    print("Transformer Stack Configuration:")
+    print(f"  Number of layers: {num_layers}")
+    print(f"  Parameters per layer: {total_block_params:,}")
+    print(f"  Total stack parameters: {num_layers * total_block_params:,}")
+    print()
+
+    # Forward through entire stack
+    stack_output = stack.forward(x, use_causal_mask=True, attention_mask=mask)
+    print(f"Input shape:  {x.shape}")
+    print(f"Output shape: {stack_output.shape}")
+    print()
+
+    # -------------------------------------------------------------------------
+    # BACKWARD PASS: Learning
+    # -------------------------------------------------------------------------
+    print("-" * 70)
+    print("5. BACKWARD PASS - How the transformer learns")
+    print("-" * 70)
+    print()
+    print("Gradients flow backward through the stack:")
+    print("  Loss -> Block N -> Block N-1 -> ... -> Block 1 -> Embedding")
+    print()
+
+    # Simulate a backward pass
+    upstream_grad = np.random.randn(*stack_output.shape) * 0.01
+    input_grad, gradients = stack.backward(upstream_grad)
+
+    print(f"Number of gradient tensors: {len(gradients)}")
+    print(f"Gradient for input shape: {input_grad.shape}")
+    print()
+    print("Sample gradient names:")
+    for name in list(gradients.keys())[:6]:
+        print(f"  {name}: {gradients[name].shape}")
+    print("  ...")
+    print()
+
+    print("=" * 70)
+    print("SUMMARY")
+    print("=" * 70)
+    print("- FFN: Processes each position independently (most parameters)")
+    print("- TransformerBlock: Attention + FFN + residuals + layer norm")
+    print("- Residual connections: Enable gradient flow in deep networks")
+    print("- TransformerStack: Multiple blocks for hierarchical processing")
+    print()
+    print("GPT stacks these blocks and adds:")
+    print("  - Token embedding (input)")
+    print("  - Position encoding (input)")
+    print("  - Output projection (to vocabulary)")
+    print()
+    print("Next step: Run 'python -m src.optimizer' to see how gradients")
+    print("           are used to update the model parameters.")
