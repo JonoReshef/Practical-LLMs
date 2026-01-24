@@ -696,6 +696,8 @@ if __name__ == "__main__":
 
     # Show how it's added to embeddings
     print("Adding positional encoding to token embeddings:")
+    # I had questions about how positional information can be added to semantic embeddings without "ruining" the signal in them. The reason is the positional encodings are a constant value and are designed to be orthogonal to the semantic information in the embeddings (ie the even and odd indices codify the orthogonal information). When these encodings are added to the token embeddings, they introduce a distinct signal which across a vast dataset can be specifically identified --> the magic of the transformer is its ability to distinguish these two types of signal *while not increasing the dimensionality of the embeddings*. See https://datascience.stackexchange.com/a/117128 for a useful explanation/visualization.
+
     combined = pos_encoder.forward(embeddings)
     print(f"  Original embedding[0,0]: {embeddings[0, 0, :4].round(3)}")
     print(f"  + Position encoding[0]:  {pos_encodings[0, :4].round(3)}")
