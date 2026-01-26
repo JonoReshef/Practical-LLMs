@@ -11,20 +11,30 @@ This script provides a comprehensive demonstration of the entire LLM lifecycle:
 The goal is to show how each component works and allow experimentation.
 
 Usage:
-    python run_demo.py [mode]
+    python run_demo.py [mode] [options]
 
     Modes:
+        help      - Show detailed help with examples and instructions
         full      - Run complete demo (pretrain + finetune + generate)
         pretrain  - Only run pre-training
         finetune  - Only run fine-tuning (requires pretrained model)
         generate  - Only run interactive generation (requires model)
         quick     - Quick demo with reduced training (for testing)
+        mac-accel - GPU-accelerated training using Apple MLX (M1/M2/M3/M4)
 
-Example:
+    Options for mac-accel mode:
+        --model-size  - Model size: tiny, small, medium, large (default: small)
+        --data-size   - Data fraction: 0.0-1.0 or chars like '100k' (default: 0.1)
+
+Examples:
+    python run_demo.py help
     python run_demo.py quick
+    python run_demo.py mac-accel --model-size medium --data-size 0.5
+    python run_demo.py mac-accel --model-size large --data-size 500k
 """
 
 import argparse
+import math
 import os
 import sys
 import time
@@ -48,6 +58,25 @@ from src.model import (
 )
 from src.optimizer import AdamW, clip_gradient_norm, get_learning_rate_with_warmup
 from src.tokenizer import BPETokenizer
+
+# MLX imports (only loaded when needed to avoid import errors on non-Mac systems)
+MLX_AVAILABLE = False
+try:
+    import mlx.core as mx
+    import mlx.nn as nn
+    import mlx.optimizers as mlx_optim
+
+    from src.model_mlx import (
+        GPTConfigMLX,
+        GPTModelMLX,
+        count_parameters_mlx,
+        create_model_mlx,
+        cross_entropy_loss_mlx,
+    )
+
+    MLX_AVAILABLE = True
+except ImportError:
+    pass
 from src.utils import (
     DataLoader,
     TextDataset,
@@ -73,6 +102,163 @@ def print_section(text: str):
     print("-" * 40)
     print(text)
     print("-" * 40)
+
+
+def show_help():
+    """Display detailed help with examples and instructions."""
+    help_text = """
+================================================================================
+                    LLM EXPLAINER - COMMAND LINE INTERFACE
+================================================================================
+
+An educational implementation of a GPT-style language model from scratch.
+This CLI provides tools for training, fine-tuning, and generating text.
+
+--------------------------------------------------------------------------------
+                              AVAILABLE COMMANDS
+--------------------------------------------------------------------------------
+
+  help        Show this detailed help message
+  quick       Quick demo with reduced training (2-3 minutes)
+  full        Complete demo: pretrain + finetune + generate (15-30 minutes)
+  pretrain    Pre-train the model on Shakespeare text
+  finetune    Fine-tune a pre-trained model (requires running pretrain first)
+  generate    Interactive text generation (requires a trained model)
+  mac-accel   GPU-accelerated training using Apple MLX (Apple Silicon only)
+
+--------------------------------------------------------------------------------
+                              QUICK START EXAMPLES
+--------------------------------------------------------------------------------
+
+  1. First time? Start with a quick demo:
+     $ python run_demo.py quick
+
+  2. Run the full training pipeline:
+     $ python run_demo.py full
+
+  3. Train a model from scratch:
+     $ python run_demo.py pretrain
+
+  4. Generate text with a trained model:
+     $ python run_demo.py generate
+
+--------------------------------------------------------------------------------
+                         MAC-ACCELERATED MODE (MLX)
+--------------------------------------------------------------------------------
+
+  For Apple Silicon Macs (M1/M2/M3/M4), use GPU acceleration for faster training.
+
+  PREREQUISITES:
+     $ pip install mlx
+
+  BASIC USAGE:
+     $ python run_demo.py mac-accel
+
+  OPTIONS:
+     --model-size    Model size preset (tiny, small, medium, large)
+     --data-size     Amount of training data to use
+
+  MODEL SIZE PRESETS:
+     tiny      ~100K params   - Fast iteration, quick experiments
+     small     ~500K params   - Default, balanced speed/quality
+     medium    ~2M params     - Better quality, slower training
+     large     ~8M params     - Best quality, requires more time/memory
+
+  DATA SIZE FORMATS:
+     Fraction:    0.1, 0.5, 1.0         (10%, 50%, 100% of dataset)
+     Count:       50000                  (exact character count)
+     Suffix:      100k, 500k, 1m        (shorthand for thousands/millions)
+
+  EXAMPLES:
+     # Quick test with tiny model
+     $ python run_demo.py mac-accel --model-size tiny --data-size 50k
+
+     # Balanced training
+     $ python run_demo.py mac-accel --model-size small --data-size 0.2
+
+     # Higher quality with more data
+     $ python run_demo.py mac-accel --model-size medium --data-size 0.5
+
+     # Best quality (full dataset, large model)
+     $ python run_demo.py mac-accel --model-size large --data-size 1.0
+
+--------------------------------------------------------------------------------
+                              WORKFLOW GUIDE
+--------------------------------------------------------------------------------
+
+  TYPICAL LEARNING WORKFLOW:
+
+     Step 1: Run quick demo to see how it works
+             $ python run_demo.py quick
+
+     Step 2: Explore individual modules (each has educational demos)
+             $ python -m src.tokenizer
+             $ python -m src.attention
+             $ python -m src.transformer
+             $ python -m src.model
+
+     Step 3: Train your own model
+             $ python run_demo.py pretrain
+
+     Step 4: Experiment with generation
+             $ python run_demo.py generate
+
+  FOR APPLE SILICON USERS:
+
+     Step 1: Install MLX
+             $ pip install mlx
+
+     Step 2: Compare NumPy vs MLX speed
+             $ python run_demo.py quick          # NumPy (CPU)
+             $ python run_demo.py mac-accel      # MLX (GPU)
+
+     Step 3: Experiment with model/data sizes
+             $ python run_demo.py mac-accel --model-size medium --data-size 0.5
+
+--------------------------------------------------------------------------------
+                              FILE STRUCTURE
+--------------------------------------------------------------------------------
+
+  After training, files are saved to:
+
+     checkpoints/              NumPy model checkpoints
+        tokenizer.json         Trained BPE tokenizer
+        model_best.npz         Best model weights
+
+     checkpoints_mlx/          MLX model checkpoints (mac-accel mode)
+        tokenizer.json         Trained BPE tokenizer
+
+     data/                     Training data
+        shakespeare.txt        Downloaded Shakespeare corpus
+
+--------------------------------------------------------------------------------
+                              RUNNING TESTS
+--------------------------------------------------------------------------------
+
+     # Run all tests
+     $ pytest tests/ -v
+
+     # Run specific test file
+     $ pytest tests/test_model.py -v
+
+     # Run with coverage
+     $ pytest tests/ --cov=src
+
+--------------------------------------------------------------------------------
+                              MORE INFORMATION
+--------------------------------------------------------------------------------
+
+  See README.md for:
+     - Architecture overview
+     - Module documentation
+     - Mathematical explanations
+     - References to research papers
+
+  GitHub: https://github.com/your-repo/LLM-explainer
+
+================================================================================
+"""
+    print(help_text)
 
 
 def download_data(data_dir: str = "data") -> str:
@@ -592,16 +778,301 @@ def run_full_demo():
     print_header("Full Demo Complete!")
 
 
+def parse_data_size(data_size_str: str, total_chars: int) -> int:
+    """
+    Parse data size specification to number of characters.
+
+    Args:
+        data_size_str: Either a fraction (0.0-1.0) or a size like '100k', '1m'
+        total_chars: Total characters available in the dataset
+
+    Returns:
+        Number of characters to use
+    """
+    data_size_str = data_size_str.lower().strip()
+
+    # Check for k/m suffix
+    if data_size_str.endswith("k"):
+        return int(float(data_size_str[:-1]) * 1000)
+    elif data_size_str.endswith("m"):
+        return int(float(data_size_str[:-1]) * 1000000)
+
+    # Try as fraction
+    try:
+        fraction = float(data_size_str)
+        if 0.0 < fraction <= 1.0:
+            return int(total_chars * fraction)
+        elif fraction > 1.0:
+            # Treat as absolute character count
+            return int(fraction)
+    except ValueError:
+        pass
+
+    raise ValueError(
+        f"Invalid data size: {data_size_str}. Use fraction (0.1), count (50000), or suffix (100k, 1m)"
+    )
+
+
+def run_mac_accel_demo(model_size: str = "small", data_size: str = "0.1"):
+    """
+    Run GPU-accelerated training using Apple MLX.
+
+    This demonstrates how more data and larger models improve performance,
+    leveraging the M1/M2/M3/M4 GPU for significant speedups.
+
+    Args:
+        model_size: One of "tiny", "small", "medium", "large"
+        data_size: Data to use - fraction (0.1), count (50000), or suffix (100k)
+    """
+    if not MLX_AVAILABLE:
+        print("=" * 60)
+        print("ERROR: MLX is not available")
+        print("=" * 60)
+        print()
+        print("MLX is required for mac-accel mode. To install:")
+        print("  pip install mlx")
+        print()
+        print("Note: MLX only works on Apple Silicon Macs (M1/M2/M3/M4).")
+        print("For Intel Macs or other systems, use 'quick' or 'full' mode.")
+        return
+
+    print_header("Mac Accelerated Training (MLX)")
+    print(f"Model size: {model_size}")
+    print(f"Data size: {data_size}")
+    print()
+    print("This mode uses Apple MLX for GPU-accelerated training.")
+    print("Compare results with 'quick' mode to see quality vs speed tradeoffs.")
+    print()
+
+    checkpoint_dir = "checkpoints_mlx"
+    os.makedirs(checkpoint_dir, exist_ok=True)
+
+    # Download and prepare data
+    data_path = download_data()
+    with open(data_path, "r", encoding="utf-8") as f:
+        full_text = f.read()
+
+    # Parse and apply data size
+    total_chars = len(full_text)
+    use_chars = parse_data_size(data_size, total_chars)
+    use_chars = min(use_chars, total_chars)  # Cap at available data
+
+    text = full_text[:use_chars]
+    print(
+        f"Using {len(text):,} characters ({100 * len(text) / total_chars:.1f}% of dataset)"
+    )
+    print()
+
+    # Train tokenizer
+    vocab_size = 1000 if model_size == "tiny" else 2000
+    tokenizer = train_tokenizer(
+        text, vocab_size=vocab_size, checkpoint_dir=checkpoint_dir
+    )
+
+    # Create MLX model
+    print_section("Creating MLX Model")
+    model, config = create_model_mlx(tokenizer.vocabulary_size, size=model_size)
+    num_params = count_parameters_mlx(model)
+
+    print(f"Model configuration ({model_size}):")
+    print(f"  Parameters: {num_params:,}")
+    print(f"  Embedding dim: {config.embedding_dim}")
+    print(f"  Attention heads: {config.num_heads}")
+    print(f"  Transformer layers: {config.num_layers}")
+    print(f"  FFN hidden dim: {config.ffn_hidden_dim}")
+    print(f"  Max sequence length: {config.max_sequence_length}")
+    print()
+
+    # Prepare dataset
+    print_section("Pre-training with MLX")
+    max_length = config.max_sequence_length
+
+    # Tokenize all text and create training sequences
+    all_tokens = tokenizer.encode(text)
+    sequences = []
+    for i in range(0, len(all_tokens) - max_length, max_length // 2):
+        seq = all_tokens[i : i + max_length + 1]
+        if len(seq) == max_length + 1:
+            sequences.append(seq)
+
+    print(f"Training sequences: {len(sequences)}")
+
+    # Training configuration based on model size
+    batch_sizes = {"tiny": 32, "small": 16, "medium": 8, "large": 4}
+    epoch_counts = {"tiny": 10, "small": 8, "medium": 5, "large": 15}
+
+    batch_size = batch_sizes.get(model_size, 16)
+    num_epochs = epoch_counts.get(model_size, 5)
+    learning_rate = 3e-4
+    warmup_steps = min(100, len(sequences) // batch_size)
+
+    print(f"Batch size: {batch_size}")
+    print(f"Number of epochs: {num_epochs}")
+    print(f"Learning rate: {learning_rate}")
+    print()
+
+    # Initialize optimizer
+    optimizer = mlx_optim.AdamW(learning_rate=learning_rate)
+
+    # Create loss function for value_and_grad
+    def loss_fn(model, inputs, targets):
+        logits = model(inputs)
+        return cross_entropy_loss_mlx(logits, targets)
+
+    loss_and_grad_fn = nn.value_and_grad(model, loss_fn)
+
+    # Training loop
+    global_step = 0
+    total_steps = num_epochs * (len(sequences) // batch_size)
+    best_loss = float("inf")
+
+    training_start = time.time()
+
+    for epoch in range(num_epochs):
+        # Shuffle sequences
+        np.random.shuffle(sequences)
+
+        epoch_loss = 0.0
+        num_batches = 0
+        epoch_start = time.time()
+
+        for i in range(0, len(sequences), batch_size):
+            batch_seqs = sequences[i : i + batch_size]
+            if len(batch_seqs) < 2:
+                continue
+
+            # Convert to MLX arrays
+            batch = mx.array(np.array(batch_seqs, dtype=np.int32))
+            inputs = batch[:, :-1]
+            targets = batch[:, 1:]
+
+            # Forward and backward with automatic differentiation
+            loss, grads = loss_and_grad_fn(model, inputs, targets)
+
+            # Learning rate warmup
+            if global_step < warmup_steps:
+                lr = learning_rate * (global_step + 1) / warmup_steps
+            else:
+                # Cosine decay
+                progress = (global_step - warmup_steps) / max(
+                    1, total_steps - warmup_steps
+                )
+                lr = learning_rate * 0.5 * (1 + math.cos(math.pi * progress))
+
+            # Update with current learning rate
+            optimizer.learning_rate = lr
+            optimizer.update(model, grads)
+
+            # Evaluate to trigger computation
+            mx.eval(model.parameters(), optimizer.state, loss)
+
+            epoch_loss += loss.item()
+            num_batches += 1
+            global_step += 1
+
+        epoch_time = time.time() - epoch_start
+        avg_loss = epoch_loss / max(num_batches, 1)
+        tokens_per_sec = (num_batches * batch_size * max_length) / epoch_time
+
+        print(
+            f"Epoch {epoch + 1}/{num_epochs} | Loss: {avg_loss:.4f} | "
+            f"Time: {epoch_time:.1f}s | Tokens/s: {tokens_per_sec:.0f}"
+        )
+
+        # Track best loss
+        if avg_loss < best_loss:
+            best_loss = avg_loss
+
+    total_time = time.time() - training_start
+    print()
+    print(f"Training complete in {total_time:.1f}s")
+    print(f"Best loss: {best_loss:.4f}")
+    print()
+
+    # Demo generation with MLX model
+    print_section("Sample Generations (MLX)")
+
+    prompts = [
+        "To be or not to be",
+        "The king said",
+        "In the forest",
+        "Love is",
+    ]
+
+    for prompt in prompts:
+        tokens = mx.array([tokenizer.encode(prompt)], dtype=mx.int32)
+
+        # Ensure we don't exceed max sequence length
+        if tokens.shape[1] >= config.max_sequence_length:
+            tokens = tokens[:, : config.max_sequence_length - 1]
+
+        gen_start = time.time()
+        generated = model.generate(tokens, max_new_tokens=30, temperature=0.8, top_k=50)
+        gen_time = time.time() - gen_start
+
+        output = tokenizer.decode(generated[0].tolist())
+        print(f"Prompt: {prompt}")
+        print(f"Output: {output}")
+        print(f"  (Generated in {gen_time * 1000:.0f}ms)")
+        print()
+
+    # Performance summary
+    print_header("Performance Summary")
+    print(f"Model: {model_size} ({num_params:,} parameters)")
+    print(f"Data: {len(text):,} characters ({len(sequences)} sequences)")
+    print(f"Training time: {total_time:.1f}s")
+    print(f"Final loss: {best_loss:.4f}")
+    print()
+    print("Experiment suggestions:")
+    print("  - Try --model-size large --data-size 1.0 for best quality")
+    print("  - Compare with 'python run_demo.py quick' to see speedup")
+    print("  - Use Activity Monitor to see GPU utilization")
+    print()
+
+    print_header("Mac Accelerated Demo Complete!")
+
+
 def main():
-    parser = argparse.ArgumentParser(description="LLM Explainer Demo")
+    parser = argparse.ArgumentParser(
+        description="LLM Explainer Demo - Educational Language Model",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+For detailed help and examples, run:
+  python run_demo.py help
+        """,
+    )
     parser.add_argument(
         "mode",
         nargs="?",
         default="quick",
-        choices=["full", "quick", "pretrain", "finetune", "generate"],
-        help="Demo mode to run",
+        choices=[
+            "help",
+            "full",
+            "quick",
+            "pretrain",
+            "finetune",
+            "generate",
+            "mac-accel",
+        ],
+        help="Demo mode to run (use 'help' for detailed instructions)",
+    )
+    parser.add_argument(
+        "--model-size",
+        choices=["tiny", "small", "medium", "large"],
+        default="small",
+        help="Model size for mac-accel mode (default: small)",
+    )
+    parser.add_argument(
+        "--data-size",
+        default="0.1",
+        help="Data to use: fraction (0.1), count (50000), or suffix (100k, 1m). Default: 0.1",
     )
     args = parser.parse_args()
+
+    # Handle help command first (before seed and header)
+    if args.mode == "help":
+        show_help()
+        return
 
     np.random.seed(42)
 
@@ -659,6 +1130,11 @@ def main():
         model = GPTModel(config)
         load_checkpoint(model, model_path)
         generate_interactive(model, tokenizer)
+    elif args.mode == "mac-accel":
+        run_mac_accel_demo(
+            model_size=args.model_size,
+            data_size=args.data_size,
+        )
 
     print("\nDone!")
 
