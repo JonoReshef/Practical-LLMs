@@ -10,3 +10,4 @@
 - Never use emojis
 - Do not create markdown files explaining what was complete unless explicitly instructed to do so
 - Build an application following an eager test driven development (TDD) approach, writing tests before implementing features and then continuously running the tests to ensure functionality, as well as expanding test coverage throughout the development process and re-evaluating existing tests for relevance and accuracy.
+- Reference `README.md` for project overview and setup instructions. Update it as necessary to reflect changes made during development.
