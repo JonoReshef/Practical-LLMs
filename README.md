@@ -123,23 +123,9 @@ uv run pytest tests/ -v  # 139 tests (MLX tests skip on non-Apple systems)
 
 ---
 
-## Dependencies
-
-### Core (NumPy-based, all platforms)
-
-- Python 3.10+
-- NumPy (all computations)
-- pytest (testing only)
-
-### Optional (Mac Accelerated mode)
-
-- mlx (Apple Silicon only - M1/M2/M3/M4 Macs)
-
-No PyTorch, TensorFlow, or other ML frameworks required.
-
----
-
 ## File Relationships
+
+Ideally each section would be independent to isolate concepts, but in reality some concepts are dependent on others. Here's a diagram of the main dependencies:
 
 ```
 tokenizer.py ─────────────────────────────────────────┐
@@ -165,12 +151,60 @@ utils.py ───────────────────────�
 
 ---
 
-## Paper References
+## References
 
-1. **Attention Mechanism**: "Attention Is All You Need" (Vaswani et al., 2017)
-2. **GPT Architecture**: "Improving Language Understanding by Generative Pre-Training" (Radford et al., 2018)
-3. **BPE Tokenization**: "Neural Machine Translation of Rare Words with Subword Units" (Sennrich et al., 2016)
-4. **GELU Activation**: "Gaussian Error Linear Units" (Hendrycks & Gimpel, 2016)
-5. **Layer Normalization**: "Layer Normalization" (Ba et al., 2016)
-6. **AdamW Optimizer**: "Decoupled Weight Decay Regularization" (Loshchilov & Hutter, 2019)
-7. **LoRA Fine-tuning**: "LoRA: Low-Rank Adaptation of Large Language Models" (Hu et al., 2021)
+### Core Transformer Architecture
+
+1. **Attention Mechanism**: [Vaswani, A., et al. (2017). Attention Is All You Need](https://arxiv.org/abs/1706.03762)
+2. **Pre-LN Transformer**: [Xiong, R., et al. (2020). On Layer Normalization in the Transformer Architecture](https://arxiv.org/abs/2002.04745)
+3. **Residual Connections**: [He, K., et al. (2015). Deep Residual Learning for Image Recognition](https://arxiv.org/abs/1512.03385)
+4. **Layer Normalization**: [Ba, J., et al. (2016). Layer Normalization](https://arxiv.org/abs/1607.06450)
+
+### GPT Models
+
+5. **GPT-1**: [Radford, A., et al. (2018). Improving Language Understanding by Generative Pre-Training](https://openai.com/research/language-unsupervised)
+6. **GPT-2**: [Radford, A., et al. (2019). Language Models are Unsupervised Multitask Learners](https://openai.com/research/better-language-models)
+7. **GPT-3**: [Brown, T., et al. (2020). Language Models are Few-Shot Learners](https://arxiv.org/abs/2005.14165)
+8. **Weight Tying**: [Press, O., & Wolf, L. (2017). Using the Output Embedding to Improve Language Models](https://arxiv.org/abs/1608.05859)
+
+### Tokenization
+
+9. **BPE Tokenization**: [Sennrich, R., et al. (2016). Neural Machine Translation of Rare Words with Subword Units](https://arxiv.org/abs/1508.07909)
+10. **SentencePiece**: [Kudo, T., & Richardson, J. (2018). SentencePiece: A simple and language independent subword tokenizer](https://arxiv.org/abs/1808.06226)
+
+### Embeddings & Positional Encoding
+
+11. **Word2Vec**: [Mikolov, T., et al. (2013). Efficient Estimation of Word Representations in Vector Space](https://arxiv.org/abs/1301.3781)
+12. **GloVe**: [Pennington, J., et al. (2014). GloVe: Global Vectors for Word Representation](https://nlp.stanford.edu/pubs/glove.pdf)
+13. **Neural Language Models**: [Bengio, Y., et al. (2003). A Neural Probabilistic Language Model](https://www.jmlr.org/papers/volume3/bengio03a/bengio03a.pdf)
+14. **Relative Position**: [Shaw, P., et al. (2018). Self-Attention with Relative Position Representations](https://arxiv.org/abs/1803.02155)
+15. **Rotary Embeddings**: [Su, J., et al. (2021). RoFormer: Enhanced Transformer with Rotary Position Embedding](https://arxiv.org/abs/2104.09864)
+
+### Activation Functions
+
+16. **GELU Activation**: [Hendrycks, D., & Gimpel, K. (2016). Gaussian Error Linear Units](https://arxiv.org/abs/1606.08415)
+17. **GLU Variants**: [Shazeer, N. (2020). GLU Variants Improve Transformer](https://arxiv.org/abs/2002.05202)
+
+### Training & Optimization
+
+18. **Adam Optimizer**: [Kingma, D.P., & Ba, J. (2014). Adam: A Method for Stochastic Optimization](https://arxiv.org/abs/1412.6980)
+19. **AdamW Optimizer**: [Loshchilov, I., & Hutter, F. (2017). Decoupled Weight Decay Regularization](https://arxiv.org/abs/1711.05101)
+20. **Learning Rate Warmup**: [Goyal, P., et al. (2017). Accurate, Large Minibatch SGD](https://arxiv.org/abs/1706.02677)
+21. **Gradient Clipping**: [Pascanu, R., et al. (2013). On the difficulty of training recurrent neural networks](https://arxiv.org/abs/1211.5063)
+
+### Text Generation & Sampling
+
+22. **Top-K Sampling**: [Fan, A., et al. (2018). Hierarchical Neural Story Generation](https://arxiv.org/abs/1805.04833)
+23. **Nucleus (Top-P) Sampling**: [Holtzman, A., et al. (2019). The Curious Case of Neural Text Degeneration](https://arxiv.org/abs/1904.09751)
+24. **Sampling Strategies**: [Ippolito, D., et al. (2019). Comparison of Diverse Decoding Methods](https://arxiv.org/abs/1909.00459)
+
+### Fine-Tuning & Adaptation
+
+25. **LoRA**: [Hu, E., et al. (2021). LoRA: Low-Rank Adaptation of Large Language Models](https://arxiv.org/abs/2106.09685)
+26. **QLoRA**: [Dettmers, T., et al. (2023). QLoRA: Efficient Finetuning of Quantized LLMs](https://arxiv.org/abs/2305.14314)
+27. **Parameter-Efficient Transfer**: [He, J., et al. (2021). Towards a Unified View of Parameter-Efficient Transfer Learning](https://arxiv.org/abs/2110.04366)
+
+### Additional Resources
+
+28. **The Illustrated Transformer**: [Jay Alammar's Visual Guide](https://jalammar.github.io/illustrated-transformer/)
+29. **Attention Mechanism Origins**: [Bahdanau, D., et al. (2014). Neural Machine Translation by Jointly Learning to Align and Translate](https://arxiv.org/abs/1409.0473)
