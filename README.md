@@ -18,6 +18,22 @@ This works on a mac/linux machine.
 uv sync
 ```
 
+### Dev Container
+
+This repository includes a dev container configuration for VS Code that provides a fully isolated, interactive development environment. To use it:
+
+1. Install the [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
+2. Open the repository in VS Code
+3. Click "Reopen in Container" when prompted (or use the command palette: "Dev Containers: Reopen in Container")
+
+**Included Tools:**
+- Python 3.14 with uv package manager
+- Claude Code CLI for AI-assisted development (run `claude` to authenticate)
+- zsh shell with common CLI tools (vim, htop, tmux, fzf, ripgrep, fd, bat, jq, tree)
+- Full sudo access for flexibility
+
+**Note:** The dev container uses `pyproject-container.toml` which excludes MLX dependencies. MLX acceleration (`mac-accel` mode) requires Apple Silicon hardware and is not available in containers. For MLX support, run natively on macOS with Apple Silicon.
+
 ## Key docs
 
 For a deep understanding of each component, we provide comprehensive documentation files with:
