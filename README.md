@@ -86,6 +86,29 @@ Input Token IDs
    Token Probabilities (via softmax)
 ```
 
+## Detailed Documentation
+
+For a deep understanding of each component, we provide comprehensive documentation files with:
+- Mathematical formulas and derivations
+- Step-by-step numeric examples
+- Visualizations and diagrams
+- References to research papers
+
+| Topic | Documentation | Code |
+|-------|---------------|------|
+| Tokenization (BPE) | [Tokenization.md](Tokenization.md) | `src/tokenizer.py` |
+| Word Embeddings | [Embeddings.md](Embeddings.md) | `src/layers.py` |
+| Positional Encoding | [PositionalEncoding.md](PositionalEncoding.md) | `src/layers.py` |
+| Attention Mechanism | [Attention.md](Attention.md) | `src/attention.py` |
+| Feed-Forward Network | [FeedForwardNetwork.md](FeedForwardNetwork.md) | `src/transformer.py` |
+| Transformer Block | [TransformerBlock.md](TransformerBlock.md) | `src/transformer.py` |
+| Full GPT Model | [GPTModel.md](GPTModel.md) | `src/model.py` |
+| Training & Optimization | [Training.md](Training.md) | `src/optimizer.py` |
+| Text Generation | [TextGeneration.md](TextGeneration.md) | `src/model.py` |
+| Fine-Tuning & LoRA | [FineTuning.md](FineTuning.md) | `src/lora.py` |
+
+Start with [How to learn with this.md](How%20to%20learn%20with%20this.md) for a guided learning path.
+
 ## Module Reference
 
 ### `src/activations.py`
