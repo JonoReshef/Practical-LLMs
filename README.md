@@ -27,18 +27,18 @@ For a deep understanding of each component, we provide comprehensive documentati
 - Visualizations and diagrams
 - References to research papers
 
-| Topic                   | Documentation                                                   | Code                 |
-| ----------------------- | --------------------------------------------------------------- | -------------------- |
-| Tokenization (BPE)      | [Tokenization.md](Tutorial/1%20-%20Tokenization.md)             | `src/tokenizer.py`   |
-| Word Embeddings         | [Embeddings.md](Tutorial/2%20-%20Embeddings.md)                 | `src/layers.py`      |
-| Positional Encoding     | [PositionalEncoding.md](Tutorial/3%20-%20PositionalEncoding.md) | `src/layers.py`      |
-| Attention Mechanism     | [Attention.md](Tutorial/4%20-%20Attention.md)                   | `src/attention.py`   |
-| Feed-Forward Network    | [FeedForwardNetwork.md](Tutorial/5%20-%20FeedForwardNetwork.md) | `src/transformer.py` |
-| Transformer Block       | [TransformerBlock.md](Tutorial/6%20-%20TransformerBlock.md)     | `src/transformer.py` |
-| Full GPT Model          | [GPTModel.md](Tutorial/7%20-%20GPTModel.md)                     | `src/model.py`       |
-| Training & Optimization | [Training.md](Tutorial/8%20-%20Training.md)                     | `src/optimizer.py`   |
-| Text Generation         | [TextGeneration.md](Tutorial/9%20-%20TextGeneration.md)         | `src/model.py`       |
-| Fine-Tuning & LoRA      | [FineTuning.md](Tutorial/10%20-%20FineTuning.md)                | `src/lora.py`        |
+| Topic                   | Documentation                                                    | Code                 |
+| ----------------------- | ---------------------------------------------------------------- | -------------------- |
+| Tokenization (BPE)      | [Tokenization.md](Tutorial/01%20-%20Tokenization.md)             | `src/tokenizer.py`   |
+| Word Embeddings         | [Embeddings.md](Tutorial/02%20-%20Embeddings.md)                 | `src/layers.py`      |
+| Positional Encoding     | [PositionalEncoding.md](Tutorial/03%20-%20PositionalEncoding.md) | `src/layers.py`      |
+| Attention Mechanism     | [Attention.md](Tutorial/04%20-%20Attention.md)                   | `src/attention.py`   |
+| Feed-Forward Network    | [FeedForwardNetwork.md](Tutorial/05%20-%20FeedForwardNetwork.md) | `src/transformer.py` |
+| Transformer Block       | [TransformerBlock.md](Tutorial/06%20-%20TransformerBlock.md)     | `src/transformer.py` |
+| Full GPT Model          | [GPTModel.md](Tutorial/07%20-%20GPTModel.md)                     | `src/model.py`       |
+| Training & Optimization | [Training.md](Tutorial/08%20-%20Training.md)                     | `src/optimizer.py`   |
+| Text Generation         | [TextGeneration.md](Tutorial/09%20-%20TextGeneration.md)         | `src/model.py`       |
+| Fine-Tuning & LoRA      | [FineTuning.md](Tutorial/10%20-%20FineTuning.md)                 | `src/lora.py`        |
 
 Start with [How to learn with this.md](How%20to%20learn%20with%20this.md) for a guided learning path.
 
