@@ -27,6 +27,8 @@ For a deep understanding of each component, we provide comprehensive documentati
 - Visualizations and diagrams
 - References to research papers
 
+Start with [How to learn with this.md](How%20to%20learn%20with%20this.md) for a guided learning path and high level summaries of each section.
+
 | Topic                   | Documentation                                                    | Code                 |
 | ----------------------- | ---------------------------------------------------------------- | -------------------- |
 | Tokenization (BPE)      | [Tokenization.md](Tutorial/01%20-%20Tokenization.md)             | `src/tokenizer.py`   |
@@ -39,8 +41,6 @@ For a deep understanding of each component, we provide comprehensive documentati
 | Training & Optimization | [Training.md](Tutorial/08%20-%20Training.md)                     | `src/optimizer.py`   |
 | Text Generation         | [TextGeneration.md](Tutorial/09%20-%20TextGeneration.md)         | `src/model.py`       |
 | Fine-Tuning & LoRA      | [FineTuning.md](Tutorial/10%20-%20FineTuning.md)                 | `src/lora.py`        |
-
-Start with [How to learn with this.md](How%20to%20learn%20with%20this.md) for a guided learning path.
 
 ## Usage
 
