@@ -69,6 +69,7 @@ This creates unique patterns for each position using sine and cosine functions a
 ### Visual Intuition
 
 Think of it like telling time with two clock hands:
+
 - **Hour hand** (slow frequency): Changes slowly across positions
 - **Minute hand** (fast frequency): Changes quickly across positions
 
@@ -85,6 +86,7 @@ $$PE_{(pos, 2i)} = \sin\left(\frac{pos}{10000^{2i/d_{model}}}\right)$$
 $$PE_{(pos, 2i+1)} = \cos\left(\frac{pos}{10000^{2i/d_{model}}}\right)$$
 
 Where:
+
 - $pos$ = position in sequence (0, 1, 2, ...)
 - $i$ = dimension index (0, 1, 2, ..., $d_{model}/2 - 1$)
 - $d_{model}$ = embedding dimension
@@ -101,6 +103,7 @@ Where:
 ## Step-by-Step Numeric Example
 
 Let's compute positional encodings for:
+
 - Sequence length: 4 positions
 - Embedding dimension: 8
 
@@ -108,32 +111,32 @@ Let's compute positional encodings for:
 
 For each dimension pair $(2i, 2i+1)$:
 
-| i | 2i (sin) | 2i+1 (cos) | Divisor = $10000^{2i/8}$ |
-|---|----------|------------|--------------------------|
-| 0 | 0 | 1 | $10000^0 = 1$ |
-| 1 | 2 | 3 | $10000^{0.25} = 10$ |
-| 2 | 4 | 5 | $10000^{0.5} = 100$ |
-| 3 | 6 | 7 | $10000^{0.75} = 1000$ |
+| i   | 2i (sin) | 2i+1 (cos) | Divisor = $10000^{2i/8}$ |
+| --- | -------- | ---------- | ------------------------ |
+| 0   | 0        | 1          | $10000^0 = 1$            |
+| 1   | 2        | 3          | $10000^{0.25} = 10$      |
+| 2   | 4        | 5          | $10000^{0.5} = 100$      |
+| 3   | 6        | 7          | $10000^{0.75} = 1000$    |
 
 ### Step 2: Calculate Angles
 
 Angle = $pos / divisor$
 
 | Position | dim 0,1 (÷1) | dim 2,3 (÷10) | dim 4,5 (÷100) | dim 6,7 (÷1000) |
-|----------|--------------|---------------|----------------|-----------------|
-| pos=0 | 0.0 | 0.0 | 0.0 | 0.0 |
-| pos=1 | 1.0 | 0.1 | 0.01 | 0.001 |
-| pos=2 | 2.0 | 0.2 | 0.02 | 0.002 |
-| pos=3 | 3.0 | 0.3 | 0.03 | 0.003 |
+| -------- | ------------ | ------------- | -------------- | --------------- |
+| pos=0    | 0.0          | 0.0           | 0.0            | 0.0             |
+| pos=1    | 1.0          | 0.1           | 0.01           | 0.001           |
+| pos=2    | 2.0          | 0.2           | 0.02           | 0.002           |
+| pos=3    | 3.0          | 0.3           | 0.03           | 0.003           |
 
 ### Step 3: Apply Sin/Cos
 
 | Position | sin(θ₀) | cos(θ₀) | sin(θ₁) | cos(θ₁) | sin(θ₂) | cos(θ₂) | sin(θ₃) | cos(θ₃) |
-|----------|---------|---------|---------|---------|---------|---------|---------|---------|
-| 0 | 0.000 | 1.000 | 0.000 | 1.000 | 0.000 | 1.000 | 0.000 | 1.000 |
-| 1 | 0.841 | 0.540 | 0.100 | 0.995 | 0.010 | 1.000 | 0.001 | 1.000 |
-| 2 | 0.909 | -0.416 | 0.199 | 0.980 | 0.020 | 1.000 | 0.002 | 1.000 |
-| 3 | 0.141 | -0.990 | 0.296 | 0.955 | 0.030 | 1.000 | 0.003 | 1.000 |
+| -------- | ------- | ------- | ------- | ------- | ------- | ------- | ------- | ------- |
+| 0        | 0.000   | 1.000   | 0.000   | 1.000   | 0.000   | 1.000   | 0.000   | 1.000   |
+| 1        | 0.841   | 0.540   | 0.100   | 0.995   | 0.010   | 1.000   | 0.001   | 1.000   |
+| 2        | 0.909   | -0.416  | 0.199   | 0.980   | 0.020   | 1.000   | 0.002   | 1.000   |
+| 3        | 0.141   | -0.990  | 0.296   | 0.955   | 0.030   | 1.000   | 0.003   | 1.000   |
 
 ### Step 4: Final Positional Encoding Matrix
 
@@ -161,11 +164,11 @@ final_embeddings = [
     # "dog" at pos 0
     [0.5+0.000, 0.3+1.000, 0.8+0.000, 0.1+1.000, ...],
     # = [0.500, 1.300, 0.800, 1.100, ...]
-    
-    # "bites" at pos 1  
+
+    # "bites" at pos 1
     [0.2+0.841, 0.7+0.540, 0.4+0.100, 0.9+0.995, ...],
     # = [1.041, 1.240, 0.500, 1.895, ...]
-    
+
     # "man" at pos 2
     [0.9+0.909, 0.1-0.416, 0.6+0.199, 0.3+0.980, ...],
     # = [1.809, -0.316, 0.799, 1.280, ...]
@@ -203,6 +206,7 @@ This means the model can learn to "look back" or "look ahead" by $k$ positions t
 ### 3. Bounded Values
 
 Unlike learned positions or simple counters:
+
 - Values stay in range $[-1, 1]$
 - No explosion for long sequences
 - Smooth gradients for training
@@ -227,68 +231,68 @@ From [src/layers.py](src/layers.py), here's the `PositionalEncoding` class:
 class PositionalEncoding:
     """
     Sinusoidal Positional Encoding from "Attention Is All You Need".
-    
+
     Creates deterministic position-dependent patterns using sine and cosine
     functions at different frequencies. These are added to token embeddings
     to give the model information about token positions.
-    
+
     Attributes:
         max_sequence_length: Maximum sequence length supported
         embedding_dimension: Dimension of embeddings (must match model)
         encoding_table: Precomputed (max_len, embed_dim) encoding matrix
     """
-    
+
     def __init__(self, max_sequence_length: int, embedding_dimension: int):
         """
         Initialize by precomputing encodings for all positions.
-        
+
         Args:
             max_sequence_length: Max positions to precompute
             embedding_dimension: Size of embedding vectors
         """
         self.max_sequence_length = max_sequence_length
         self.embedding_dimension = embedding_dimension
-        
+
         # Precompute the full encoding table
         self.encoding_table = self._compute_encoding()
-    
+
     def _compute_encoding(self) -> np.ndarray:
         """
         Compute sinusoidal positional encodings.
-        
+
         Returns:
             Array of shape (max_sequence_length, embedding_dimension)
         """
         # Create position indices: [0, 1, 2, ..., max_len-1]
         positions = np.arange(self.max_sequence_length)[:, np.newaxis]
-        
+
         # Create dimension indices for the frequency calculation
         # dim_indices = [0, 1, 2, ..., embed_dim/2 - 1]
         dim_indices = np.arange(0, self.embedding_dimension, 2)
-        
+
         # Compute the frequency divisors: 10000^(2i/d_model)
         # Using log for numerical stability: 10000^x = exp(x * log(10000))
         divisors = np.exp(dim_indices * (-np.log(10000.0) / self.embedding_dimension))
-        
+
         # Compute angles for all positions and dimensions
         angles = positions * divisors  # Shape: (max_len, embed_dim/2)
-        
+
         # Initialize encoding table
         encoding = np.zeros((self.max_sequence_length, self.embedding_dimension))
-        
+
         # Apply sin to even indices, cos to odd indices
         encoding[:, 0::2] = np.sin(angles)  # Even dimensions
         encoding[:, 1::2] = np.cos(angles)  # Odd dimensions
-        
+
         return encoding
-    
+
     def get_encoding(self, sequence_length: int) -> np.ndarray:
         """
         Get positional encoding for a sequence of given length.
-        
+
         Args:
             sequence_length: Number of positions needed
-        
+
         Returns:
             Array of shape (sequence_length, embedding_dimension)
         """
@@ -349,34 +353,35 @@ Position ──────────────────►     Position 
   -1 │╱    ╰───╯    ╰───           -1 │
      └───────────────────►           └────────────────────────►
        0  1  2  3  4  5              0   100   200   300   400
-       
+
 Fast oscillation for              Slow change for long-range
 nearby positions                  position differences
 ```
 
 ### Heatmap of Position Encodings
 
-```
-                    Embedding Dimension (0 → 128)
-                  Fast freq              Slow freq
-                     │                        │
-                     ▼                        ▼
-Position   ┌────────────────────────────────────────┐
-    0      │▓▓▓▓░░░░▓▓▓▓░░░░▓▓▓▓░░░░▓▓▓▓░░░░│
-    1      │░░▓▓▓▓░░░░▓▓▓▓░░░░▓▓▓▓░░░░▓▓▓▓░│ 
-    2      │░░░░▓▓▓▓░░░░▓▓▓▓░░░░▓▓▓▓░░░░▓▓│
-    3      │▓▓░░░░▓▓▓▓░░░░▓▓▓▓░░░░▓▓▓▓░░░░│
-    4      │▓▓▓▓░░░░▓▓▓▓░░░░▓▓▓▓░░░░▓▓▓▓░░│
-    5      │░░▓▓▓▓░░░░▓▓▓▓░░░░▓▓▓▓░░░░▓▓▓▓│
-    :      │   ...                        ...  │
-  127      │▓░▓░▓░▓░▓░▓░▓░▓░▓░▓░▓░▓░▓░▓░│
-           └────────────────────────────────────────┘
-           
-▓ = positive value, ░ = negative value
+The following visualization from [The Illustrated Transformer](https://jalammar.github.io/illustrated-transformer/) shows positional encodings for 20 positions (rows) with 512 dimensions (columns):
 
-Note: Left side (low dims) shows fast oscillation
-      Right side (high dims) shows slow change
-```
+![Positional Encoding Heatmap](https://jalammar.github.io/images/t/attention-is-all-you-need-positional-encoding.png)
+
+_Image credit: Jay Alammar, [The Illustrated Transformer](https://jalammar.github.io/illustrated-transformer/)_
+
+**How to read this heatmap:**
+
+- **Each row** = one position in the sequence (position 0 at top, position 19 at bottom)
+- **Each column** = one dimension of the encoding vector (dim 0 on left, dim 511 on right)
+- **Colors** = values between -1 (one color) and +1 (opposite color)
+
+**Key observations:**
+
+- **Left side (low dimensions)**: Rapid color changes as you move down rows - these are the **fast frequencies** that cycle every few positions
+- **Right side (high dimensions)**: Colors stay nearly constant across all rows - these are the **slow frequencies** that barely change over 20 positions
+- The pattern creates a unique "fingerprint" for each position
+
+**Why the difference?**
+
+- Dimension 0 uses divisor = 1, so the angle increases by 1.0 per position (completes a full sine cycle in ~6 positions)
+- Dimension 510 uses divisor ≈ 10000, so the angle increases by only 0.0001 per position (would need ~60,000 positions to complete one cycle)
 
 ### Position Similarity Matrix
 
@@ -445,12 +450,12 @@ attention_scores += attention_bias
 
 ### Comparison
 
-| Method | Length Extrapolation | Computational Cost | Used In |
-|--------|---------------------|-------------------|---------|
-| Sinusoidal | Good | Low (precomputed) | Original Transformer |
-| Learned | Poor | Low | BERT, GPT-2 |
-| RoPE | Excellent | Medium | LLaMA, GPT-J |
-| ALiBi | Excellent | Low | BLOOM |
+| Method     | Length Extrapolation | Computational Cost | Used In              |
+| ---------- | -------------------- | ------------------ | -------------------- |
+| Sinusoidal | Good                 | Low (precomputed)  | Original Transformer |
+| Learned    | Poor                 | Low                | BERT, GPT-2          |
+| RoPE       | Excellent            | Medium             | LLaMA, GPT-J         |
+| ALiBi      | Excellent            | Low                | BLOOM                |
 
 ---
 
