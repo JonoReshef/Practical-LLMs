@@ -58,15 +58,15 @@ Token ID 156 ("cat")  →  [0.12, -0.34, 0.87, 0.05, ..., -0.23]
 ### Key Properties
 
 1. **Dense**: Unlike one-hot encoding, embeddings use fewer dimensions but all values are non-zero
-2. **Learned**: Values are optimized during training, not hand-crafted  
+2. **Learned**: Values are optimized during training, not hand-crafted
 3. **Semantic**: Similar words naturally cluster together in the vector space
 
 ### One-Hot vs. Embedding
 
-| Representation | "cat" with vocab_size=5000 |
-|---------------|---------------------------|
-| **One-Hot** | `[0,0,0,...,1,...,0,0,0]` (5000 dims, mostly zeros) |
-| **Embedding** | `[0.12, -0.34, 0.87, ...]` (128 dims, all informative) |
+| Representation | "cat" with vocab_size=5000                             |
+| -------------- | ------------------------------------------------------ |
+| **One-Hot**    | `[0,0,0,...,1,...,0,0,0]` (5000 dims, mostly zeros)    |
+| **Embedding**  | `[0.12, -0.34, 0.87, ...]` (128 dims, all informative) |
 
 ---
 
@@ -150,7 +150,7 @@ batch_embeddings = [
     [[0.1, 0.2, 0.3, 0.4],
      [0.5, 0.6, 0.7, 0.8],
      [0.9, 1.0, 1.1, 1.2]],
-    
+
     # Sequence 2: "cat sat mat"
     [[0.5, 0.6, 0.7, 0.8],
      [0.9, 1.0, 1.1, 1.2],
@@ -173,7 +173,7 @@ After training, embeddings capture semantic relationships:
                               ↑
           "queen" ●          │
                              │         ● "woman"
-                             │    
+                             │
        "king" ●              │              ● "man"
                              │
   ─────────────────────────────────────────────────→
@@ -201,6 +201,7 @@ Numerically:
 ```
 
 This works because:
+
 - `king - man` captures the concept of "royalty"
 - Adding `woman` places us at the female version of royalty
 
@@ -211,6 +212,7 @@ This works because:
 $$\text{cosine\_similarity}(A, B) = \frac{A \cdot B}{|A| \cdot |B|}$$
 
 Example:
+
 ```python
 cat = [0.5, 0.6, 0.7, 0.8]
 dog = [0.52, 0.58, 0.72, 0.79]  # Similar to cat
@@ -226,22 +228,22 @@ cosine_sim(cat, car) = 0.543  # Less similar
 
 The choice of embedding dimension affects the model's capacity:
 
-| Model | Embedding Dim | Parameters (for 50K vocab) |
-|-------|--------------|---------------------------|
-| Small | 64 | 3.2M |
-| Educational (this repo) | 128 | 6.4M |
-| GPT-2 Small | 768 | 38.4M |
-| GPT-2 Large | 1280 | 64M |
-| GPT-3 | 12,288 | 614M |
+| Model                   | Embedding Dim | Parameters (for 50K vocab) |
+| ----------------------- | ------------- | -------------------------- |
+| Small                   | 64            | 3.2M                       |
+| Educational (this repo) | 128           | 6.4M                       |
+| GPT-2 Small             | 768           | 38.4M                      |
+| GPT-2 Large             | 1280          | 64M                        |
+| GPT-3                   | 12,288        | 614M                       |
 
 ### Trade-offs
 
-| Small Embedding Dim | Large Embedding Dim |
-|---------------------|---------------------|
-| Fewer parameters | More parameters |
-| Faster training | Slower training |
-| Less capacity | More capacity |
-| May underfit | May overfit (on small data) |
+| Small Embedding Dim | Large Embedding Dim         |
+| ------------------- | --------------------------- |
+| Fewer parameters    | More parameters             |
+| Faster training     | Slower training             |
+| Less capacity       | More capacity               |
+| May underfit        | May overfit (on small data) |
 
 ---
 
@@ -253,70 +255,70 @@ From [src/layers.py](src/layers.py), here's the `Embedding` class:
 class Embedding:
     """
     Token Embedding Layer.
-    
+
     Maps discrete token IDs to dense vector representations.
     This is essentially a learnable lookup table.
-    
+
     Attributes:
         vocabulary_size: Number of unique tokens
         embedding_dimension: Size of embedding vectors
         embedding_table: The learnable weight matrix (vocab_size, embed_dim)
     """
-    
+
     def __init__(self, vocabulary_size: int, embedding_dimension: int):
         """
         Initialize embedding layer with Xavier initialization.
-        
+
         Args:
             vocabulary_size: Number of tokens in vocabulary
             embedding_dimension: Dimension of embedding vectors
         """
         self.vocabulary_size = vocabulary_size
         self.embedding_dimension = embedding_dimension
-        
+
         # Initialize embedding table with Xavier/Glorot initialization
         # This helps maintain variance across layers
         weight_std = np.sqrt(2.0 / (vocabulary_size + embedding_dimension))
         self.embedding_table = np.random.randn(
             vocabulary_size, embedding_dimension
         ) * weight_std
-        
+
         # Cache for backward pass
         self._input_cache = None
         self.embedding_gradient = None
-    
+
     def forward(self, token_ids: np.ndarray) -> np.ndarray:
         """
         Look up embeddings for input token IDs.
-        
+
         Args:
             token_ids: Integer array of shape (batch_size, sequence_length)
-        
+
         Returns:
             Embeddings of shape (batch_size, sequence_length, embedding_dim)
-        
+
         The operation is simply: output[b, t, :] = embedding_table[token_ids[b, t], :]
         """
         self._input_cache = token_ids
-        
+
         # Simple indexing performs the lookup
         return self.embedding_table[token_ids]
-    
+
     def backward(self, upstream_gradient: np.ndarray) -> None:
         """
         Compute gradient for embedding table.
-        
+
         The gradient for each embedding vector is the sum of upstream
         gradients for all positions where that token appears.
-        
+
         Args:
             upstream_gradient: Shape (batch_size, seq_len, embedding_dim)
         """
         token_ids = self._input_cache
-        
+
         # Initialize gradient to zeros
         self.embedding_gradient = np.zeros_like(self.embedding_table)
-        
+
         # Accumulate gradients for each token
         # If token i appears multiple times, its gradients are summed
         batch_size, seq_len = token_ids.shape
@@ -324,7 +326,7 @@ class Embedding:
             for t in range(seq_len):
                 token_id = token_ids[b, t]
                 self.embedding_gradient[token_id] += upstream_gradient[b, t]
-    
+
     @property
     def weight(self) -> np.ndarray:
         """Return embedding table (for compatibility)."""
@@ -379,7 +381,7 @@ b           :  │  ...                          │
             :  │  ...                          │
 (2000)  1999│░▓░▓░░▓░▓▓▓░░▓░░▓▓░░▓░▓░░▓▓░░│  last token
                └─────────────────────────────────┘
-               
+
 ▓ = positive value, ░ = negative value
 ```
 
@@ -387,19 +389,19 @@ b           :  │  ...                          │
 
 ```
                     2D Projection of Embedding Space
-                    
+
                               Animals
                               ╭─────╮
                          "cat" ●   ● "dog"
                       "kitten" ●     ● "puppy"
                               ╰─────╯
-                              
+
         Royalty                               Actions
         ╭─────╮                               ╭─────╮
    "king" ●   ● "queen"              "ran" ●    ● "walked"
   "prince" ●   ● "princess"          "ate" ●    ● "drank"
         ╰─────╯                               ╰─────╯
-                              
+
                               Places
                               ╭─────╮
                        "city" ●   ● "town"
@@ -548,4 +550,4 @@ print(f"Cosine similarity (before training): {cosine_similarity(emb1, emb2):.3f}
 
 ---
 
-**Next Step**: Embeddings don't carry position information - "cat sat" and "sat cat" would have identical embeddings (just in different order). Continue to [PositionalEncoding.md](PositionalEncoding.md) to learn how we add position information.
+**Next Step**: Embeddings don't carry position information - "cat sat" and "sat cat" would have identical embeddings (just in different order). Continue to [03 - PositionalEncoding.md](03%20-%20PositionalEncoding.md) to learn how we add position information.

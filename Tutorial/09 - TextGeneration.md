@@ -82,11 +82,11 @@ Greedy choice: "the" (index 2, probability 0.62)
 
 ### Pros and Cons
 
-| Pros | Cons |
-|------|------|
-| Deterministic (reproducible) | Repetitive output |
-| Fast (no sampling) | Boring, generic text |
-| Highest confidence path | Can get stuck in loops |
+| Pros                         | Cons                   |
+| ---------------------------- | ---------------------- |
+| Deterministic (reproducible) | Repetitive output      |
+| Fast (no sampling)           | Boring, generic text   |
+| Highest confidence path      | Can get stuck in loops |
 
 ### The Repetition Problem
 
@@ -95,8 +95,8 @@ Greedy decoding often produces repetitive text:
 ```
 Prompt: "The quick brown"
 
-Greedy output: "The quick brown fox jumps over the lazy dog. 
-The quick brown fox jumps over the lazy dog. 
+Greedy output: "The quick brown fox jumps over the lazy dog.
+The quick brown fox jumps over the lazy dog.
 The quick brown fox jumps over the lazy dog..."
 ```
 
@@ -111,18 +111,19 @@ The quick brown fox jumps over the lazy dog..."
 $$P(token_i) = \frac{e^{z_i / T}}{\sum_j e^{z_j / T}}$$
 
 Where:
+
 - $z_i$ = logit for token $i$
 - $T$ = temperature
 
 ### Temperature Effects
 
-| Temperature | Effect | Use Case |
-|-------------|--------|----------|
-| $T < 1$ | Sharper distribution (more confident) | Factual, focused |
-| $T = 1$ | Original distribution | Balanced |
-| $T > 1$ | Flatter distribution (more random) | Creative, diverse |
-| $T → 0$ | Approaches greedy | Maximum focus |
-| $T → ∞$ | Uniform distribution | Maximum randomness |
+| Temperature | Effect                                | Use Case           |
+| ----------- | ------------------------------------- | ------------------ |
+| $T < 1$     | Sharper distribution (more confident) | Factual, focused   |
+| $T = 1$     | Original distribution                 | Balanced           |
+| $T > 1$     | Flatter distribution (more random)    | Creative, diverse  |
+| $T → 0$     | Approaches greedy                     | Maximum focus      |
+| $T → ∞$     | Uniform distribution                  | Maximum randomness |
 
 ### Visual Intuition
 
@@ -217,11 +218,11 @@ No chance of garbage!
 
 ### Trade-off
 
-| K value | Result |
-|---------|--------|
-| K=1 | Equivalent to greedy |
-| K=5-10 | Good balance |
-| K=50+ | Almost no filtering |
+| K value | Result               |
+| ------- | -------------------- |
+| K=1     | Equivalent to greedy |
+| K=5-10  | Good balance         |
+| K=50+   | Almost no filtering  |
 
 ---
 
@@ -354,38 +355,38 @@ Output: "The cat sat on the mat"
 Prompt: "Once upon a time there was a"
 
 Greedy (T=0):
-"Once upon a time there was a king who lived in a castle. 
+"Once upon a time there was a king who lived in a castle.
 The king was a good king who lived in a castle. The king..."
 (Repetitive, gets stuck)
 
 Temperature 0.5:
-"Once upon a time there was a young princess who lived in 
-the kingdom of Everland. She loved to read books and play 
+"Once upon a time there was a young princess who lived in
+the kingdom of Everland. She loved to read books and play
 with her cat Whiskers."
 (Coherent but predictable)
 
 Temperature 1.0 + Top-K=50:
-"Once upon a time there was a peculiar baker named Mortimer 
+"Once upon a time there was a peculiar baker named Mortimer
 who could communicate with bread. Every morning, the loaves
 would whisper secrets of the kingdom."
 (Creative, diverse)
 
 Temperature 2.0:
-"Once upon a time there was a seventh quantum jellybeans 
-harmonize the cathedral's purple manifesto concerning 
+"Once upon a time there was a seventh quantum jellybeans
+harmonize the cathedral's purple manifesto concerning
 vegetables that telegraph..."
 (Too random, loses coherence)
 ```
 
 ### Strategy Selection Guide
 
-| Goal | Recommended Settings |
-|------|---------------------|
-| Code generation | T=0.2, greedy or top-K=10 |
-| Factual writing | T=0.5-0.7, top-K=50 |
-| Creative writing | T=0.8-1.0, top-P=0.95 |
-| Brainstorming | T=1.0-1.2, top-P=0.9 |
-| Maximum creativity | T=1.5, top-P=0.95 |
+| Goal               | Recommended Settings      |
+| ------------------ | ------------------------- |
+| Code generation    | T=0.2, greedy or top-K=10 |
+| Factual writing    | T=0.5-0.7, top-K=50       |
+| Creative writing   | T=0.8-1.0, top-P=0.95     |
+| Brainstorming      | T=1.0-1.2, top-P=0.9      |
+| Maximum creativity | T=1.5, top-P=0.95         |
 
 ---
 
@@ -403,13 +404,13 @@ def generate(
 ) -> np.ndarray:
     """
     Generate text autoregressively.
-    
+
     Starting from the prompt, generate new tokens one at a time by:
     1. Forward pass to get next token probabilities
     2. Sample from the distribution (with temperature)
     3. Append sampled token
     4. Repeat
-    
+
     Args:
         prompt_tokens: Starting token IDs, shape (batch_size, prompt_length)
         max_new_tokens: Maximum number of new tokens to generate
@@ -418,47 +419,47 @@ def generate(
                     1 = sample from true distribution
                     >1 = more exploration
         top_k: If set, only sample from top k most likely tokens
-    
+
     Returns:
         Generated token sequence, shape (batch_size, prompt_length + max_new_tokens)
     """
     # Start with the prompt
     generated = prompt_tokens.copy()
-    
+
     for _ in range(max_new_tokens):
         # Get the context (limited by max sequence length)
         context_length = min(generated.shape[1], self.config.max_sequence_length)
         context = generated[:, -context_length:]
-        
+
         # Forward pass to get logits
         logits = self.forward(context)
-        
+
         # Get logits for the last position
         # Shape: (batch_size, vocab_size)
         next_token_logits = logits[:, -1, :]
-        
+
         # Apply temperature
         if temperature != 1.0:
             next_token_logits = next_token_logits / temperature
-        
+
         # Apply top-k filtering
         if top_k is not None:
             # Set all logits outside top-k to -infinity
             top_k_indices = np.argsort(next_token_logits, axis=-1)[:, :-top_k]
             for b in range(next_token_logits.shape[0]):
                 next_token_logits[b, top_k_indices[b]] = float("-inf")
-        
+
         # Convert to probabilities
         probs = softmax(next_token_logits)
-        
+
         # Sample next token
         next_token = np.zeros((generated.shape[0], 1), dtype=np.int64)
         for b in range(probs.shape[0]):
             next_token[b, 0] = np.random.choice(self.config.vocab_size, p=probs[b])
-        
+
         # Append to sequence
         generated = np.concatenate([generated, next_token], axis=1)
-    
+
     return generated
 ```
 
@@ -468,34 +469,34 @@ def generate(
 def top_p_filtering(logits: np.ndarray, top_p: float = 0.9) -> np.ndarray:
     """
     Filter logits using nucleus (top-p) sampling.
-    
+
     Args:
         logits: Raw logits, shape (vocab_size,)
         top_p: Cumulative probability threshold
-    
+
     Returns:
         Filtered logits with low-probability tokens set to -inf
     """
     # Sort indices by logit value (descending)
     sorted_indices = np.argsort(logits)[::-1]
     sorted_logits = logits[sorted_indices]
-    
+
     # Convert to probabilities
     probs = softmax(sorted_logits)
-    
+
     # Cumulative probabilities
     cumulative_probs = np.cumsum(probs)
-    
+
     # Find where cumulative probability exceeds top_p
     cutoff_index = np.searchsorted(cumulative_probs, top_p) + 1
-    
+
     # Create mask for tokens to keep
     indices_to_remove = sorted_indices[cutoff_index:]
-    
+
     # Set removed indices to -inf
     filtered_logits = logits.copy()
     filtered_logits[indices_to_remove] = float('-inf')
-    
+
     return filtered_logits
 ```
 
@@ -598,4 +599,4 @@ print(tokenizer.decode(output[0].tolist()))
 
 ---
 
-**Next Step**: Now you can generate text! Continue to [FineTuning.md](FineTuning.md) to learn how to adapt the model to specific tasks with minimal training.
+**Next Step**: Now you can generate text! Continue to [10 - FineTuning.md](10%20-%20FineTuning.md) to learn how to adapt the model to specific tasks with minimal training.

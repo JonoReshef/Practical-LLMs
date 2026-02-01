@@ -31,11 +31,11 @@ Neural networks operate on numbers, not text. We need a systematic way to:
 
 Consider three approaches:
 
-| Approach | Example: "unhappiness" | Vocabulary Size | Sequence Length |
-|----------|------------------------|-----------------|-----------------|
-| **Character-level** | `['u','n','h','a','p','p','i','n','e','s','s']` | ~100 | Very long |
-| **Word-level** | `['unhappiness']` | ~500,000+ | Short |
-| **Subword (BPE)** | `['un', 'happiness']` | ~30,000-50,000 | Balanced |
+| Approach            | Example: "unhappiness"                          | Vocabulary Size | Sequence Length |
+| ------------------- | ----------------------------------------------- | --------------- | --------------- |
+| **Character-level** | `['u','n','h','a','p','p','i','n','e','s','s']` | ~100            | Very long       |
+| **Word-level**      | `['unhappiness']`                               | ~500,000+       | Short           |
+| **Subword (BPE)**   | `['un', 'happiness']`                           | ~30,000-50,000  | Balanced        |
 
 **Character-level** creates very long sequences the model must process, making it computationally expensive and harder to capture long-range dependencies.
 
@@ -94,6 +94,7 @@ BPE was originally a data compression algorithm, adapted for NLP by [Sennrich et
 ### Why It Works
 
 BPE learns the statistical structure of the language:
+
 - Common words (like "the", "and") become single tokens
 - Common prefixes/suffixes ("un-", "-ing", "-tion") become tokens
 - Rare words decompose into known subwords
@@ -113,43 +114,45 @@ Target vocabulary size: 15
 
 **Step 0: Character Vocabulary**
 
-| Token ID | Token |
-|----------|-------|
-| 0 | `<PAD>` |
-| 1 | `<UNK>` |
-| 2 | `<BOS>` |
-| 3 | `<EOS>` |
-| 4 | ` ` (space) |
-| 5 | `e` |
-| 6 | `l` |
-| 7 | `o` |
-| 8 | `r` |
-| 9 | `s` |
-| 10 | `t` |
-| 11 | `w` |
+| Token ID | Token       |
+| -------- | ----------- |
+| 0        | `<PAD>`     |
+| 1        | `<UNK>`     |
+| 2        | `<BOS>`     |
+| 3        | `<EOS>`     |
+| 4        | ` ` (space) |
+| 5        | `e`         |
+| 6        | `l`         |
+| 7        | `o`         |
+| 8        | `r`         |
+| 9        | `s`         |
+| 10       | `t`         |
+| 11       | `w`         |
 
 **Current tokenization:**
+
 ```
 "low lower lowest" → [6, 7, 11, 4, 6, 7, 11, 5, 8, 4, 6, 7, 11, 5, 9, 10]
                       l  o  w   _  l  o  w   e  r  _  l  o  w   e  s  t
 ```
+
 (where `_` represents space)
 
 ### Iteration 1: Find Most Frequent Pair
 
 Count all adjacent pairs:
 
-| Pair | Count |
-|------|-------|
-| (l, o) | 3 |
-| (o, w) | 3 |
-| (w, _) | 2 |
-| (_, l) | 2 |
-| (w, e) | 1 |
-| (e, r) | 1 |
-| (r, _) | 1 |
-| (e, s) | 1 |
-| (s, t) | 1 |
+| Pair    | Count |
+| ------- | ----- |
+| (l, o)  | 3     |
+| (o, w)  | 3     |
+| (w, \_) | 2     |
+| (\_, l) | 2     |
+| (w, e)  | 1     |
+| (e, r)  | 1     |
+| (r, \_) | 1     |
+| (e, s)  | 1     |
+| (s, t)  | 1     |
 
 **Most frequent pairs (tied):** `(l, o)` and `(o, w)` - both appear 3 times.
 
@@ -160,11 +163,12 @@ We select `(l, o)` (alphabetically first in this case):
 **Updated vocabulary:**
 
 | Token ID | Token |
-|----------|-------|
-| ... | ... |
-| 12 | `lo` |
+| -------- | ----- |
+| ...      | ...   |
+| 12       | `lo`  |
 
 **Updated tokenization:**
+
 ```
 "low lower lowest" → [12, 11, 4, 12, 11, 5, 8, 4, 12, 11, 5, 9, 10]
                       lo  w   _  lo  w   e  r  _  lo  w   e  s  t
@@ -176,22 +180,23 @@ Sequence length: 16 → 13 (reduced by 3)
 
 New pair counts:
 
-| Pair | Count |
-|------|-------|
-| (lo, w) | 3 |
-| (w, _) | 2 |
-| (_, lo) | 2 |
-| (w, e) | 1 |
-| (e, r) | 1 |
-| (r, _) | 1 |
-| (e, s) | 1 |
-| (s, t) | 1 |
+| Pair     | Count |
+| -------- | ----- |
+| (lo, w)  | 3     |
+| (w, \_)  | 2     |
+| (\_, lo) | 2     |
+| (w, e)   | 1     |
+| (e, r)   | 1     |
+| (r, \_)  | 1     |
+| (e, s)   | 1     |
+| (s, t)   | 1     |
 
 **Most frequent:** `(lo, w)` appears 3 times.
 
 **New merge rule**: `lo` + `w` → `low` (Token ID 13)
 
 **Updated tokenization:**
+
 ```
 "low lower lowest" → [13, 4, 13, 5, 8, 4, 13, 5, 9, 10]
                       low _  low e  r  _  low e  s  t
@@ -203,15 +208,15 @@ Sequence length: 13 → 10 (reduced by 3)
 
 New pair counts:
 
-| Pair | Count |
-|------|-------|
-| (low, _) | 2 |
-| (_, low) | 2 |
-| (low, e) | 2 |
-| (e, r) | 1 |
-| (r, _) | 1 |
-| (e, s) | 1 |
-| (s, t) | 1 |
+| Pair      | Count |
+| --------- | ----- |
+| (low, \_) | 2     |
+| (\_, low) | 2     |
+| (low, e)  | 2     |
+| (e, r)    | 1     |
+| (r, \_)   | 1     |
+| (e, s)    | 1     |
+| (s, t)    | 1     |
 
 **Most frequent (tied):** `(low, _)`, `(_, low)`, and `(low, e)` all appear 2 times.
 
@@ -220,6 +225,7 @@ Select `(low, e)`:
 **New merge rule**: `low` + `e` → `lowe` (Token ID 14)
 
 **Updated tokenization:**
+
 ```
 "low lower lowest" → [13, 4, 14, 8, 4, 14, 9, 10]
                       low _  lowe r  _  lowe s  t
@@ -227,23 +233,25 @@ Select `(low, e)`:
 
 ### Final Merged Rules (Vocabulary = 15)
 
-| Merge # | Rule | New Token |
-|---------|------|-----------|
-| 1 | l + o → lo | ID 12 |
-| 2 | lo + w → low | ID 13 |
-| 3 | low + e → lowe | ID 14 |
+| Merge # | Rule           | New Token |
+| ------- | -------------- | --------- |
+| 1       | l + o → lo     | ID 12     |
+| 2       | lo + w → low   | ID 13     |
+| 3       | low + e → lowe | ID 14     |
 
 ### Encoding New Text
 
 Now let's encode text using the trained tokenizer:
 
 **Text: "low"**
+
 1. Split into characters: `['l', 'o', 'w']`
 2. Apply merge rule 1: `['lo', 'w']`
 3. Apply merge rule 2: `['low']`
 4. Result: `[13]`
 
 **Text: "flower"** (not in training data!)
+
 1. Split into characters: `['f', 'l', 'o', 'w', 'e', 'r']`
 2. 'f' not in vocabulary → `['<UNK>', 'l', 'o', 'w', 'e', 'r']`
 3. Apply merge rule 1: `['<UNK>', 'lo', 'w', 'e', 'r']`
@@ -257,12 +265,12 @@ Now let's encode text using the trained tokenizer:
 
 Special tokens serve important functions in language model architectures:
 
-| Token | Description | Usage |
-|-------|-------------|-------|
-| `<PAD>` | Padding | Fill shorter sequences to match batch length |
-| `<UNK>` | Unknown | Represent out-of-vocabulary characters |
-| `<BOS>` | Beginning of Sequence | Signal the start of a text |
-| `<EOS>` | End of Sequence | Signal the end of generated text |
+| Token   | Description           | Usage                                        |
+| ------- | --------------------- | -------------------------------------------- |
+| `<PAD>` | Padding               | Fill shorter sequences to match batch length |
+| `<UNK>` | Unknown               | Represent out-of-vocabulary characters       |
+| `<BOS>` | Beginning of Sequence | Signal the start of a text                   |
+| `<EOS>` | End of Sequence       | Signal the end of generated text             |
 
 ### Example with Special Tokens
 
@@ -293,7 +301,7 @@ From [src/tokenizer.py](src/tokenizer.py), here's the core BPE implementation:
 def train(self, text: str, vocabulary_size: int, min_frequency: int = 2) -> None:
     """
     Train the BPE tokenizer on a text corpus.
-    
+
     Algorithm:
     1. Initialize vocabulary with all unique characters
     2. Add special tokens
@@ -306,49 +314,49 @@ def train(self, text: str, vocabulary_size: int, min_frequency: int = 2) -> None
     # Step 1: Initialize vocabulary with special tokens
     self._initialize_special_tokens()
     next_token_id = len(self.vocabulary)
-    
+
     # Step 2: Split text into characters and add to vocabulary
     words = self._preprocess_text(text)
-    
+
     # Add all unique characters to vocabulary
     all_chars = set()
     for word in words:
         all_chars.update(word)
-    
+
     for char in sorted(all_chars):
         if char not in self.token_to_id:
             self.vocabulary[next_token_id] = char
             self.token_to_id[char] = next_token_id
             next_token_id += 1
-    
+
     # Step 3: Convert words to lists of tokens for merging
     word_tokens: List[List[str]] = [list(word) for word in words]
-    
+
     # Step 4: Iteratively merge most frequent pairs
     while len(self.vocabulary) < vocabulary_size:
         # Count pair frequencies
         pair_frequencies = self._count_pair_frequencies(word_tokens)
-        
+
         if not pair_frequencies:
             break
-        
+
         # Find most frequent pair
         most_frequent_pair = max(pair_frequencies, key=pair_frequencies.get)
         frequency = pair_frequencies[most_frequent_pair]
-        
+
         if frequency < min_frequency:
             break
-        
+
         # Create new merged token
         token1, token2 = most_frequent_pair
         new_token = token1 + token2
-        
+
         # Add to vocabulary and record merge rule
         self.vocabulary[next_token_id] = new_token
         self.token_to_id[new_token] = next_token_id
         next_token_id += 1
         self.merges.append(most_frequent_pair)
-        
+
         # Apply merge to all words
         word_tokens = self._apply_merge(word_tokens, most_frequent_pair, new_token)
 ```
@@ -360,22 +368,22 @@ def encode(self, text: str) -> List[int]:
     """Convert text to token IDs."""
     words = self._preprocess_text(text)
     all_token_ids = []
-    
+
     for word in words:
         # Start with characters
         tokens = list(word)
-        
+
         # Apply merge rules in order
         for merge_pair in self.merges:
             tokens = self._apply_merge_to_tokens(tokens, merge_pair)
-        
+
         # Convert to IDs
         for token in tokens:
             if token in self.token_to_id:
                 all_token_ids.append(self.token_to_id[token])
             else:
                 all_token_ids.append(self.unk_token_id)
-    
+
     return all_token_ids
 ```
 
@@ -467,26 +475,26 @@ Subword decomposition (rare words):
 
 ### Vocabulary Size
 
-| Size | Pros | Cons |
-|------|------|------|
-| Small (<10K) | Fast training, small model | Long sequences, OOV issues |
-| Medium (30-50K) | Good balance | Standard choice for most LLMs |
-| Large (>100K) | Short sequences | Slower training, embedding table size |
+| Size            | Pros                       | Cons                                  |
+| --------------- | -------------------------- | ------------------------------------- |
+| Small (<10K)    | Fast training, small model | Long sequences, OOV issues            |
+| Medium (30-50K) | Good balance               | Standard choice for most LLMs         |
+| Large (>100K)   | Short sequences            | Slower training, embedding table size |
 
 ### Computational Complexity
 
-- **Training**: O(n * vocab_size) where n = corpus size
-- **Encoding**: O(m * k) where m = text length, k = number of merges
+- **Training**: O(n \* vocab_size) where n = corpus size
+- **Encoding**: O(m \* k) where m = text length, k = number of merges
 - **Decoding**: O(1) per token (simple lookup)
 
 ### Real-World Tokenizer Statistics
 
-| Model | Tokenizer | Vocab Size | Avg chars/token |
-|-------|-----------|------------|-----------------|
-| GPT-2 | BPE | 50,257 | ~4 |
-| GPT-3/4 | BPE (tiktoken) | ~100,000 | ~4 |
-| BERT | WordPiece | 30,522 | ~4 |
-| LLaMA | SentencePiece | 32,000 | ~4 |
+| Model   | Tokenizer      | Vocab Size | Avg chars/token |
+| ------- | -------------- | ---------- | --------------- |
+| GPT-2   | BPE            | 50,257     | ~4              |
+| GPT-3/4 | BPE (tiktoken) | ~100,000   | ~4              |
+| BERT    | WordPiece      | 30,522     | ~4              |
+| LLaMA   | SentencePiece  | 32,000     | ~4              |
 
 ---
 
@@ -536,4 +544,4 @@ print(f"Merges learned: {len(tokenizer.merges)}")
 
 ---
 
-**Next Step**: Once text is tokenized into IDs, we need to convert these IDs into meaningful numerical representations. Continue to [Embeddings.md](Embeddings.md) to learn how.
+**Next Step**: Once text is tokenized into IDs, we need to convert these IDs into meaningful numerical representations. Continue to [02 - Embeddings.md](02%20-%20Embeddings.md) to learn how.

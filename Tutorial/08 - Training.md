@@ -61,6 +61,7 @@ For a single prediction:
 $$L = -\sum_{i=1}^{V} y_i \log(\hat{p}_i)$$
 
 Where:
+
 - $V$ = vocabulary size
 - $y_i$ = 1 if $i$ is the correct token, 0 otherwise (one-hot)
 - $\hat{p}_i$ = predicted probability for token $i$
@@ -70,12 +71,12 @@ $$L = -\log(\hat{p}_{\text{correct}})$$
 
 ### Intuition
 
-| Predicted probability for correct token | Loss |
-|----------------------------------------|------|
-| 0.99 | $-\log(0.99) = 0.01$ (very good!) |
-| 0.50 | $-\log(0.50) = 0.69$ (uncertain) |
-| 0.10 | $-\log(0.10) = 2.30$ (poor) |
-| 0.01 | $-\log(0.01) = 4.61$ (very wrong!) |
+| Predicted probability for correct token | Loss                               |
+| --------------------------------------- | ---------------------------------- |
+| 0.99                                    | $-\log(0.99) = 0.01$ (very good!)  |
+| 0.50                                    | $-\log(0.50) = 0.69$ (uncertain)   |
+| 0.10                                    | $-\log(0.10) = 2.30$ (poor)        |
+| 0.01                                    | $-\log(0.01) = 4.61$ (very wrong!) |
 
 ### From Logits to Loss
 
@@ -130,7 +131,7 @@ $$\frac{\partial L}{\partial w} = \frac{\partial L}{\partial y} \cdot \frac{\par
 ```
                 Forward                          Backward
                 ───────►                         ◄───────
-                
+
 Loss L ◄─────── Output Linear ◄─────── LayerNorm ◄─────── Transformer Stack
          ∂L/∂logits          ∂L/∂h_norm         ∂L/∂h_trans
 
@@ -152,7 +153,8 @@ target    = [0,    0,    1,    0,    0,    0   ]  # one-hot
 gradient  = [0.18, 0.01, -0.35, 0.03, 0.01, 0.13] # pred - target
 ```
 
-**Intuition**: 
+**Intuition**:
+
 - Correct token (index 2): gradient is negative → push logit up
 - Wrong tokens: gradient is positive → push logits down
 
@@ -164,12 +166,12 @@ gradient  = [0.18, 0.01, -0.35, 0.03, 0.01, 0.13] # pred - target
 
 ### Why Not Plain SGD?
 
-| Issue | SGD Problem | Adam Solution |
-|-------|-------------|---------------|
-| Learning rate | Same for all params | Adaptive per-parameter |
-| Gradient noise | High variance | Momentum smoothing |
-| Saddle points | Can get stuck | Momentum carries through |
-| Scale sensitivity | Problematic | Normalized by gradient history |
+| Issue             | SGD Problem         | Adam Solution                  |
+| ----------------- | ------------------- | ------------------------------ |
+| Learning rate     | Same for all params | Adaptive per-parameter         |
+| Gradient noise    | High variance       | Momentum smoothing             |
+| Saddle points     | Can get stuck       | Momentum carries through       |
+| Scale sensitivity | Problematic         | Normalized by gradient history |
 
 ### Adam Components
 
@@ -196,13 +198,13 @@ $$\theta_t = \theta_{t-1} - \alpha \cdot \frac{\hat{m}_t}{\sqrt{\hat{v}_t} + \ep
 
 ### Typical Hyperparameters
 
-| Parameter | Symbol | Typical Value | Description |
-|-----------|--------|---------------|-------------|
-| Learning rate | $\alpha$ | 3e-4 | Step size |
-| Beta1 | $\beta_1$ | 0.9 | Momentum decay |
-| Beta2 | $\beta_2$ | 0.999 | Squared gradient decay |
-| Epsilon | $\epsilon$ | 1e-8 | Numerical stability |
-| Weight decay | $\lambda$ | 0.01 | Regularization |
+| Parameter     | Symbol     | Typical Value | Description            |
+| ------------- | ---------- | ------------- | ---------------------- |
+| Learning rate | $\alpha$   | 3e-4          | Step size              |
+| Beta1         | $\beta_1$  | 0.9           | Momentum decay         |
+| Beta2         | $\beta_2$  | 0.999         | Squared gradient decay |
+| Epsilon       | $\epsilon$ | 1e-8          | Numerical stability    |
+| Weight decay  | $\lambda$  | 0.01          | Regularization         |
 
 ---
 
@@ -231,6 +233,7 @@ Start with small learning rate and linearly increase:
 $$\text{lr}_t = \text{lr}_{\text{max}} \cdot \frac{t}{\text{warmup\_steps}}$$
 
 **Why warmup?**
+
 - Early gradients are noisy (random weights)
 - Large updates early can destabilize training
 - Optimizer statistics (m, v) need time to stabilize
@@ -242,6 +245,7 @@ After warmup, decay the learning rate following a cosine curve:
 $$\text{lr}_t = \text{lr}_{\text{min}} + \frac{1}{2}(\text{lr}_{\text{max}} - \text{lr}_{\text{min}})\left(1 + \cos\left(\frac{t - t_w}{T - t_w}\pi\right)\right)$$
 
 Where:
+
 - $t_w$ = warmup steps
 - $T$ = total steps
 - $\text{lr}_{\text{min}}$ often set to 0 or 1e-5
@@ -298,13 +302,13 @@ def clip_gradient_norm(gradients, max_norm=1.0):
     for grad in gradients.values():
         total_norm += np.sum(grad ** 2)
     total_norm = np.sqrt(total_norm)
-    
+
     # Scale if necessary
     if total_norm > max_norm:
         scale = max_norm / total_norm
         for key in gradients:
             gradients[key] *= scale
-    
+
     return gradients
 ```
 
@@ -455,7 +459,7 @@ epsilon = 1e-8
 update = lr * m_hat / (sqrt(v_hat) + epsilon)
        = 3e-4 * 0.2 / (0.2 + 1e-8)
        = 3e-4
-       
+
 # With weight decay (lambda = 0.01)
 weight_decay_term = lr * 0.01 * 0.5 = 1.5e-6
 
@@ -475,54 +479,54 @@ From [src/model.py](src/model.py):
 def cross_entropy_loss(logits: np.ndarray, targets: np.ndarray) -> float:
     """
     Compute cross-entropy loss for language modeling.
-    
+
     Args:
         logits: Model predictions, shape (batch, seq_len, vocab_size)
         targets: Target token IDs, shape (batch, seq_len)
-    
+
     Returns:
         Scalar loss value (average over all positions)
     """
     batch_size, seq_len, vocab_size = logits.shape
-    
+
     # Reshape for easier indexing
     logits_flat = logits.reshape(-1, vocab_size)  # (batch*seq, vocab)
     targets_flat = targets.reshape(-1)             # (batch*seq,)
-    
+
     # Compute log probabilities (numerically stable)
     max_logits = np.max(logits_flat, axis=-1, keepdims=True)
     shifted_logits = logits_flat - max_logits
     log_sum_exp = np.log(np.sum(np.exp(shifted_logits), axis=-1))
     log_probs = shifted_logits[np.arange(len(targets_flat)), targets_flat] - log_sum_exp
-    
+
     # Average negative log probability
     loss = -np.mean(log_probs)
-    
+
     return loss
 
 
 def cross_entropy_loss_backward(logits: np.ndarray, targets: np.ndarray) -> np.ndarray:
     """
     Compute gradient of cross-entropy loss with respect to logits.
-    
+
     The gradient is simply: softmax(logits) - one_hot(targets)
     """
     batch_size, seq_len, vocab_size = logits.shape
-    
+
     # Compute softmax probabilities
     exp_logits = np.exp(logits - np.max(logits, axis=-1, keepdims=True))
     probs = exp_logits / np.sum(exp_logits, axis=-1, keepdims=True)
-    
+
     # Subtract 1 from correct class probabilities
     # This is equivalent to: probs - one_hot(targets)
     grad = probs.copy()
     batch_indices = np.arange(batch_size)[:, None]
     seq_indices = np.arange(seq_len)[None, :]
     grad[batch_indices, seq_indices, targets] -= 1.0
-    
+
     # Average over batch and sequence
     grad = grad / (batch_size * seq_len)
-    
+
     return grad
 ```
 
@@ -535,7 +539,7 @@ class AdamW:
     """
     AdamW optimizer with decoupled weight decay.
     """
-    
+
     def __init__(
         self,
         learning_rate: float = 1e-3,
@@ -549,17 +553,17 @@ class AdamW:
         self.beta2 = beta2
         self.epsilon = epsilon
         self.weight_decay = weight_decay
-        
+
         self.m = {}  # First moment estimates
         self.v = {}  # Second moment estimates
         self.t = 0   # Time step
-    
+
     def initialize(self, parameters: Dict[str, np.ndarray]):
         """Initialize optimizer state for each parameter."""
         for name, param in parameters.items():
             self.m[name] = np.zeros_like(param)
             self.v[name] = np.zeros_like(param)
-    
+
     def step(
         self,
         gradients: Dict[str, np.ndarray],
@@ -571,29 +575,29 @@ class AdamW:
         """
         lr = learning_rate if learning_rate is not None else self.learning_rate
         self.t += 1
-        
+
         for name, param in parameters.items():
             if name not in gradients:
                 continue
-            
+
             grad = gradients[name]
-            
+
             # Update biased first moment estimate
             self.m[name] = self.beta1 * self.m[name] + (1 - self.beta1) * grad
-            
+
             # Update biased second raw moment estimate
             self.v[name] = self.beta2 * self.v[name] + (1 - self.beta2) * (grad ** 2)
-            
+
             # Compute bias-corrected estimates
             m_hat = self.m[name] / (1 - self.beta1 ** self.t)
             v_hat = self.v[name] / (1 - self.beta2 ** self.t)
-            
+
             # Compute update
             update = lr * m_hat / (np.sqrt(v_hat) + self.epsilon)
-            
+
             # Apply update
             param -= update
-            
+
             # Apply decoupled weight decay
             if self.weight_decay > 0:
                 param -= lr * self.weight_decay * param
@@ -613,14 +617,14 @@ def get_learning_rate_with_warmup(
 ) -> float:
     """
     Compute learning rate with linear warmup and cosine decay.
-    
+
     Args:
         step: Current training step
         base_lr: Maximum/base learning rate
         warmup_steps: Number of warmup steps
         total_steps: Total number of training steps
         min_lr: Minimum learning rate (default 0)
-    
+
     Returns:
         Learning rate for current step
     """
@@ -648,23 +652,23 @@ def train_step(
     max_grad_norm: float = 1.0,
 ) -> float:
     """Perform a single training step."""
-    
+
     # 1. Forward pass
     logits = model.forward(inputs)
-    
+
     # 2. Compute loss
     loss = cross_entropy_loss(logits, targets)
-    
+
     # 3. Backward pass
     grad_logits = cross_entropy_loss_backward(logits, targets)
     gradients = model.backward(grad_logits)
-    
+
     # 4. Clip gradients
     gradients = clip_gradient_norm(gradients, max_grad_norm)
-    
+
     # 5. Update parameters
     optimizer.step(gradients, learning_rate=learning_rate)
-    
+
     return loss
 ```
 
@@ -674,12 +678,12 @@ def train_step(
 
 ### Key Metrics
 
-| Metric | Good Sign | Bad Sign |
-|--------|-----------|----------|
-| Training Loss | Decreasing | Stuck or increasing |
-| Validation Loss | Decreasing | Increasing (overfitting) |
-| Gradient Norm | Stable ~0.1-1.0 | Very large or NaN |
-| Learning Rate | Following schedule | N/A |
+| Metric          | Good Sign          | Bad Sign                 |
+| --------------- | ------------------ | ------------------------ |
+| Training Loss   | Decreasing         | Stuck or increasing      |
+| Validation Loss | Decreasing         | Increasing (overfitting) |
+| Gradient Norm   | Stable ~0.1-1.0    | Very large or NaN        |
+| Learning Rate   | Following schedule | N/A                      |
 
 ### Loss Visualization
 
@@ -693,7 +697,7 @@ Loss
   │      ****
 0 │          *******  ← converging
   └──────────────────────────► Epochs
-  
+
 Healthy training: exponential-like decay
 ```
 
@@ -747,4 +751,4 @@ Epoch 1/3 | Step 150/485 | Loss: 4.9823 | LR: 2.95e-04
 
 ---
 
-**Next Step**: Now that we can train our model, continue to [TextGeneration.md](TextGeneration.md) to learn how to use it to generate text.
+**Next Step**: Now that we can train our model, continue to [09 - TextGeneration.md](09%20-%20TextGeneration.md) to learn how to use it to generate text.

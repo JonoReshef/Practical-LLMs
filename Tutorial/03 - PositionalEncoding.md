@@ -506,8 +506,8 @@ print(f"Similarity pos0-pos9: {cosine_sim(encodings[0], encodings[9]):.3f}")
 
 4. **ALiBi Paper**: [Press, O., et al. (2022). Train Short, Test Long: Attention with Linear Biases](https://arxiv.org/abs/2108.12409)
 
-5. **This Repository**: See [src/layers.py](src/layers.py) for the `PositionalEncoding` class implementation.
+5. **This Repository**: See [src/layers.py](../src/layers.py) for the `PositionalEncoding` class implementation.
 
 ---
 
-**Next Step**: Now that embeddings have position information, the model needs to understand how tokens relate to each other. Continue to [Attention.md](Attention.md) to learn about the attention mechanism.
+**Next Step**: Now that embeddings have position information, the model needs to understand how tokens relate to each other. Continue to [04 - Attention.md](04%20-%20Attention.md) to learn about the attention mechanism.

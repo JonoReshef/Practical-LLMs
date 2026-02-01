@@ -73,13 +73,13 @@ A GPT model is a **decoder-only transformer** designed for autoregressive langua
 
 ### Component Summary
 
-| Component | Input Shape | Output Shape | Purpose |
-|-----------|-------------|--------------|---------|
-| Token Embedding | (batch, seq_len) | (batch, seq_len, embed_dim) | IDs → Vectors |
-| Positional Encoding | (batch, seq_len, embed_dim) | (batch, seq_len, embed_dim) | Add position info |
-| Transformer Blocks | (batch, seq_len, embed_dim) | (batch, seq_len, embed_dim) | Process context |
-| Final LayerNorm | (batch, seq_len, embed_dim) | (batch, seq_len, embed_dim) | Normalize outputs |
-| Output Linear | (batch, seq_len, embed_dim) | (batch, seq_len, vocab_size) | Predict next token |
+| Component           | Input Shape                 | Output Shape                 | Purpose            |
+| ------------------- | --------------------------- | ---------------------------- | ------------------ |
+| Token Embedding     | (batch, seq_len)            | (batch, seq_len, embed_dim)  | IDs → Vectors      |
+| Positional Encoding | (batch, seq_len, embed_dim) | (batch, seq_len, embed_dim)  | Add position info  |
+| Transformer Blocks  | (batch, seq_len, embed_dim) | (batch, seq_len, embed_dim)  | Process context    |
+| Final LayerNorm     | (batch, seq_len, embed_dim) | (batch, seq_len, embed_dim)  | Normalize outputs  |
+| Output Linear       | (batch, seq_len, embed_dim) | (batch, seq_len, vocab_size) | Predict next token |
 
 ---
 
@@ -171,7 +171,7 @@ for block in [block_1, block_2, block_3, block_4]:
     normed = block.attn_norm(x)
     attn_out = block.attention(normed)
     x = x + attn_out
-    
+
     # Pre-LN FFN
     normed = block.ffn_norm(x)
     ffn_out = block.ffn(normed)
@@ -316,14 +316,14 @@ probs_0 = softmax([0.24, 0.18, -0.44, 0.02, 0.18, -0.45])
 
 ### Summary Table
 
-| Step | Shape | Description |
-|------|-------|-------------|
-| Input token IDs | (3,) | [2, 4, 1] |
-| Token embedding | (3, 4) | Look up vectors |
-| + Positional | (3, 4) | Add position info |
-| After transformer | (3, 4) | Contextualized |
-| After LayerNorm | (3, 4) | Normalized |
-| Output logits | (3, 6) | Token predictions |
+| Step              | Shape  | Description       |
+| ----------------- | ------ | ----------------- |
+| Input token IDs   | (3,)   | [2, 4, 1]         |
+| Token embedding   | (3, 4) | Look up vectors   |
+| + Positional      | (3, 4) | Add position info |
+| After transformer | (3, 4) | Contextualized    |
+| After LayerNorm   | (3, 4) | Normalized        |
+| Output logits     | (3, 6) | Token predictions |
 
 ---
 
@@ -372,7 +372,7 @@ The logit for token $i$ is: $l_i = h \cdot e_i$ (dot product with embedding)
 @dataclass
 class GPTConfig:
     """Configuration for GPT model."""
-    
+
     vocab_size: int = 2000           # Vocabulary size
     embedding_dimension: int = 128    # Hidden dimension
     num_heads: int = 4                # Attention heads
@@ -384,15 +384,15 @@ class GPTConfig:
 
 ### Model Sizes Comparison
 
-| Model | Layers | Embed Dim | Heads | FFN Dim | Params |
-|-------|--------|-----------|-------|---------|--------|
-| This repo | 4 | 128 | 4 | 512 | ~1M |
-| GPT-1 | 12 | 768 | 12 | 3072 | 117M |
-| GPT-2 Small | 12 | 768 | 12 | 3072 | 124M |
-| GPT-2 Medium | 24 | 1024 | 16 | 4096 | 355M |
-| GPT-2 Large | 36 | 1280 | 20 | 5120 | 774M |
-| GPT-2 XL | 48 | 1600 | 25 | 6400 | 1.5B |
-| GPT-3 | 96 | 12288 | 96 | 49152 | 175B |
+| Model        | Layers | Embed Dim | Heads | FFN Dim | Params |
+| ------------ | ------ | --------- | ----- | ------- | ------ |
+| This repo    | 4      | 128       | 4     | 512     | ~1M    |
+| GPT-1        | 12     | 768       | 12    | 3072    | 117M   |
+| GPT-2 Small  | 12     | 768       | 12    | 3072    | 124M   |
+| GPT-2 Medium | 24     | 1024      | 16    | 4096    | 355M   |
+| GPT-2 Large  | 36     | 1280      | 20    | 5120    | 774M   |
+| GPT-2 XL     | 48     | 1600      | 25    | 6400    | 1.5B   |
+| GPT-3        | 96     | 12288     | 96    | 49152   | 175B   |
 
 ### Parameter Count Breakdown
 
@@ -430,7 +430,7 @@ From [src/model.py](src/model.py):
 class GPTModel:
     """
     Complete GPT Model implementation.
-    
+
     Combines:
     - Token embeddings
     - Positional encodings
@@ -438,22 +438,22 @@ class GPTModel:
     - Final layer norm
     - Output projection
     """
-    
+
     def __init__(self, config: GPTConfig):
         self.config = config
-        
+
         # Token embedding
         self.token_embedding = Embedding(
             vocab_size=config.vocab_size,
             embedding_dimension=config.embedding_dimension
         )
-        
+
         # Positional encoding
         self.positional_encoding = PositionalEncoding(
             embedding_dimension=config.embedding_dimension,
             max_sequence_length=config.max_sequence_length
         )
-        
+
         # Transformer stack
         self.transformer_stack = TransformerStack(
             embedding_dimension=config.embedding_dimension,
@@ -461,10 +461,10 @@ class GPTModel:
             num_layers=config.num_layers,
             ffn_hidden_dimension=config.ffn_hidden_dimension
         )
-        
+
         # Final layer norm (for Pre-LN architecture)
         self.final_layer_norm = LayerNorm(config.embedding_dimension)
-        
+
         # Output projection (optionally tied with embedding)
         if config.use_weight_tying:
             # Share weights with embedding
@@ -476,7 +476,7 @@ class GPTModel:
                 input_features=config.embedding_dimension,
                 output_features=config.vocab_size
             )
-    
+
     def forward(
         self,
         input_ids: np.ndarray,
@@ -484,30 +484,30 @@ class GPTModel:
     ) -> np.ndarray:
         """
         Forward pass through the GPT model.
-        
+
         Args:
             input_ids: Token indices, shape (batch, seq_len)
             use_causal_mask: Whether to use causal attention
-        
+
         Returns:
             Logits of shape (batch, seq_len, vocab_size)
         """
         # Step 1: Token embedding
         x = self.token_embedding.forward(input_ids)
-        
+
         # Step 2: Add positional encoding
         seq_len = input_ids.shape[1]
         x = self.positional_encoding.forward(x, seq_len)
-        
+
         # Step 3: Pass through transformer blocks
         x = self.transformer_stack.forward(x, use_causal_mask)
-        
+
         # Step 4: Final layer norm
         x = self.final_layer_norm.forward(x)
-        
+
         # Step 5: Project to vocabulary
         logits = self.output_projection.forward(x)
-        
+
         return logits
 ```
 
@@ -516,7 +516,7 @@ class GPTModel:
 ```python
 class TransformerStack:
     """Stack of identical Transformer blocks."""
-    
+
     def __init__(
         self,
         embedding_dimension: int,
@@ -532,7 +532,7 @@ class TransformerStack:
             )
             for _ in range(num_layers)
         ]
-    
+
     def forward(
         self,
         input_tensor: np.ndarray,
@@ -715,4 +715,4 @@ print(f"Predicted next token ID: {predicted_token}")
 
 ---
 
-**Next Step**: The model is complete! Continue to [Training.md](Training.md) to learn how we optimize these parameters with gradient descent.
+**Next Step**: The model is complete! Continue to [08 - Training.md](08%20-%20Training.md) to learn how we optimize these parameters with gradient descent.

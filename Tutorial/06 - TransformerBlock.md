@@ -127,6 +127,7 @@ Even if $\frac{\partial f}{\partial x} \approx 0$, the gradient is still $\appro
 $$\text{LayerNorm}(x) = \gamma \odot \frac{x - \mu}{\sqrt{\sigma^2 + \epsilon}} + \beta$$
 
 Where:
+
 - $\mu$ = mean across features: $\mu = \frac{1}{d}\sum_{i=1}^{d} x_i$
 - $\sigma^2$ = variance across features: $\sigma^2 = \frac{1}{d}\sum_{i=1}^{d} (x_i - \mu)^2$
 - $\gamma$ = learnable scale parameter
@@ -162,12 +163,12 @@ output = x_normalized
 
 ### Why Layer Normalization?
 
-| Without Normalization | With Normalization |
-|----------------------|-------------------|
+| Without Normalization          | With Normalization               |
+| ------------------------------ | -------------------------------- |
 | Activations can grow unbounded | Values stay in predictable range |
-| Internal covariate shift | Stable statistics |
-| Harder to train deep networks | Easier optimization |
-| Learning rate sensitive | More robust |
+| Internal covariate shift       | Stable statistics                |
+| Harder to train deep networks  | Easier optimization              |
+| Learning rate sensitive        | More robust                      |
 
 ---
 
@@ -192,12 +193,12 @@ x ──► LayerNorm ──► Attention ──► + ──► LayerNorm ──
 
 ### Why Pre-LN?
 
-| Aspect | Post-LN | Pre-LN |
-|--------|---------|--------|
-| Gradient flow | Can accumulate before norm | Direct path through residuals |
-| Training stability | Requires careful warmup | More stable |
-| Final output | Already normalized | Needs final LayerNorm |
-| Modern preference | Less common | Standard in GPT-2/3/4 |
+| Aspect             | Post-LN                    | Pre-LN                        |
+| ------------------ | -------------------------- | ----------------------------- |
+| Gradient flow      | Can accumulate before norm | Direct path through residuals |
+| Training stability | Requires careful warmup    | More stable                   |
+| Final output       | Already normalized         | Needs final LayerNorm         |
+| Modern preference  | Less common                | Standard in GPT-2/3/4         |
 
 ### Gradient Path Comparison
 
@@ -263,7 +264,7 @@ norm_2 = [1.17, -0.84, -0.50, 0.17]  # Simplified
 # After attention with 2 heads:
 attn_output = [
     [-0.30, 0.85, -0.70, 0.55],   # Position 0 attends to past
-    [-0.50, 0.30, 0.10, 0.90],   # Position 1 
+    [-0.50, 0.30, 0.10, 0.90],   # Position 1
     [0.20, -0.40, 0.60, 0.70],   # Position 2
 ]
 ```
@@ -361,12 +362,12 @@ Output          ▼
 
 ### The Role of Each Component
 
-| Component | Purpose | What Happens Without It |
-|-----------|---------|------------------------|
-| **Attention** | Token communication | No context understanding |
-| **FFN** | Per-position processing | No non-linearity |
-| **Residual** | Gradient flow, identity learning | Training fails for deep nets |
-| **LayerNorm** | Stable activations | Exploding/vanishing activations |
+| Component     | Purpose                          | What Happens Without It         |
+| ------------- | -------------------------------- | ------------------------------- |
+| **Attention** | Token communication              | No context understanding        |
+| **FFN**       | Per-position processing          | No non-linearity                |
+| **Residual**  | Gradient flow, identity learning | Training fails for deep nets    |
+| **LayerNorm** | Stable activations               | Exploding/vanishing activations |
 
 ### Synergy of Components
 
@@ -394,14 +395,14 @@ From [src/transformer.py](src/transformer.py):
 class TransformerBlock:
     """
     Single Transformer Decoder Block.
-    
+
     Uses Pre-LayerNorm architecture (GPT-2 style):
     - LayerNorm before attention
     - Residual connection after attention
     - LayerNorm before FFN
     - Residual connection after FFN
     """
-    
+
     def __init__(
         self,
         embedding_dimension: int,
@@ -410,23 +411,23 @@ class TransformerBlock:
     ):
         self.embedding_dimension = embedding_dimension
         self.num_heads = num_heads
-        
+
         # Layer norms
         self.attention_layer_norm = LayerNorm(embedding_dimension)
         self.ffn_layer_norm = LayerNorm(embedding_dimension)
-        
+
         # Self-attention
         self.self_attention = MultiHeadAttention(
             embedding_dimension=embedding_dimension,
             num_heads=num_heads
         )
-        
+
         # Feed-forward network
         self.feed_forward = FeedForwardNetwork(
             embedding_dimension=embedding_dimension,
             hidden_dimension=ffn_hidden_dimension,
         )
-    
+
     def forward(
         self,
         input_tensor: np.ndarray,
@@ -434,43 +435,43 @@ class TransformerBlock:
     ) -> np.ndarray:
         """
         Forward pass through the transformer block.
-        
+
         Args:
             input_tensor: Shape (batch, seq_len, embedding_dim)
             use_causal_mask: Whether to use causal masking
-        
+
         Returns:
             Output of same shape as input
         """
         # Cache for residual
         self._input_cache = input_tensor
         seq_len = input_tensor.shape[1]
-        
+
         # Create causal mask
         mask = create_causal_mask(seq_len) if use_causal_mask else None
-        
+
         # ============ Attention Sub-block ============
         # Step 1: Pre-attention layer norm
         normed = self.attention_layer_norm.forward(input_tensor)
-        
+
         # Step 2: Self-attention
         attn_output = self.self_attention.forward(
             query=normed, key=normed, value=normed, mask=mask
         )
-        
+
         # Step 3: Residual connection
         post_attention = input_tensor + attn_output
-        
+
         # ============ FFN Sub-block ============
         # Step 4: Pre-FFN layer norm
         normed = self.ffn_layer_norm.forward(post_attention)
-        
+
         # Step 5: Feed-forward network
         ffn_output = self.feed_forward.forward(normed)
-        
+
         # Step 6: Residual connection
         output = post_attention + ffn_output
-        
+
         return output
 ```
 
@@ -480,34 +481,34 @@ class TransformerBlock:
 class LayerNorm:
     """
     Layer Normalization.
-    
+
     Normalizes across the feature dimension:
     y = gamma * (x - mean) / sqrt(var + eps) + beta
     """
-    
+
     def __init__(self, normalized_shape: int, epsilon: float = 1e-5):
         self.normalized_shape = normalized_shape
         self.epsilon = epsilon
-        
+
         # Learnable parameters, initialized to identity transform
         self.gamma = np.ones(normalized_shape)   # Scale
         self.beta = np.zeros(normalized_shape)   # Shift
-    
+
     def forward(self, input_tensor: np.ndarray) -> np.ndarray:
         """Normalize input tensor."""
         self._input_cache = input_tensor
-        
+
         # Compute statistics across last axis (features)
         mean = np.mean(input_tensor, axis=-1, keepdims=True)
         variance = np.var(input_tensor, axis=-1, keepdims=True)
-        
+
         # Normalize
         std = np.sqrt(variance + self.epsilon)
         normalized = (input_tensor - mean) / std
-        
+
         # Scale and shift
         output = self.gamma * normalized + self.beta
-        
+
         return output
 ```
 
@@ -607,14 +608,14 @@ Input: Raw token embeddings            "cat": [0.2, 0.4, 0.1, ...]
 
 Block 1: Local patterns                "cat" learns it's near "sat"
 └─► Attention finds immediate          "sat" learns it's a verb
-    neighbors                          
-                                       
+    neighbors
+
 Block 2: Syntactic relations           "cat" knows it's the subject
 └─► Subject-verb connections           "sat" knows "cat" is doing it
-                                       
+
 Block 3: Semantic understanding        "cat" encodes "animal doing action"
-└─► Meaning accumulates                
-                                       
+└─► Meaning accumulates
+
 Block 4: High-level representation     "cat" = full contextual meaning
 └─► Ready for prediction               ready to predict next word
 ```
@@ -673,4 +674,4 @@ print(f"Same shape? {x.shape == output.shape}")
 
 ---
 
-**Next Step**: Now we understand individual blocks. Continue to [GPTModel.md](GPTModel.md) to see how everything assembles into a complete language model.
+**Next Step**: Now we understand individual blocks. Continue to [07 - GPTModel.md](07%20-%20GPTModel.md) to see how everything assembles into a complete language model.

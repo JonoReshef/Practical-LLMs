@@ -29,10 +29,12 @@ When you read the sentence "The **cat** that ran across the street was **black**
 ### Why Attention Matters
 
 Without attention:
+
 - Each position only sees local context (like in CNNs) or
 - Information must flow sequentially (like in RNNs)
 
 With attention:
+
 - Every position can directly access every other position
 - Long-range dependencies are captured in one step
 - Parallel computation is possible
@@ -47,11 +49,11 @@ The attention mechanism uses three projections of the input: **Query (Q)**, **Ke
 
 Think of attention like searching a database:
 
-| Concept | Database Analogy | In Attention |
-|---------|-----------------|--------------|
-| **Query (Q)** | Search term: "What am I looking for?" | Current token asking for context |
-| **Key (K)** | Index/tag: "What does each record contain?" | Each token's identifier |
-| **Value (V)** | Content: "The actual information" | Each token's information to retrieve |
+| Concept       | Database Analogy                            | In Attention                         |
+| ------------- | ------------------------------------------- | ------------------------------------ |
+| **Query (Q)** | Search term: "What am I looking for?"       | Current token asking for context     |
+| **Key (K)**   | Index/tag: "What does each record contain?" | Each token's identifier              |
+| **Value (V)** | Content: "The actual information"           | Each token's information to retrieve |
 
 ### How It Works
 
@@ -67,7 +69,7 @@ Sentence: "The cat sat on the mat"
 
 When processing "sat":
   Query for "sat" asks: "Who performed the action?"
-  
+
   Token    | Key (what it is)     | Attention Score | Value (its info)
   ---------|----------------------|-----------------|------------------
   "The"    | article              | 0.05 (low)      | [0.1, 0.2, ...]
@@ -89,6 +91,7 @@ When processing "sat":
 $$\text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right) V$$
 
 Where:
+
 - $Q$ = Query matrix (what each position is looking for)
 - $K$ = Key matrix (what each position contains)
 - $V$ = Value matrix (what information each position provides)
@@ -260,6 +263,7 @@ For **autoregressive** language models (like GPT), we can only look at **past** 
 ### Why Mask?
 
 During training, we predict each token from previous tokens only:
+
 ```
 "The cat sat" → predict each word from left context
 
@@ -303,7 +307,7 @@ Queries │pos1 │  ✓     ✓     ✗     ✗          │
 (who's  │pos2 │  ✓     ✓     ✓     ✗          │
 looking)│pos3 │  ✓     ✓     ✓     ✓          │
         └─────┴───────────────────────────────┘
-        
+
 ✓ = can attend (visible)
 ✗ = masked out (set to -∞ before softmax)
 ```
@@ -317,6 +321,7 @@ Instead of one attention function, we run **multiple attention heads in parallel
 ### Why Multiple Heads?
 
 Different heads can learn different patterns:
+
 - **Head 1**: Focus on grammatical relationships (subject-verb)
 - **Head 2**: Focus on nearby context
 - **Head 3**: Focus on semantic similarity
@@ -407,39 +412,39 @@ def scaled_dot_product_attention(
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Compute Scaled Dot-Product Attention.
-    
+
     Attention(Q, K, V) = softmax(Q @ K^T / sqrt(d_k)) @ V
-    
+
     Args:
         query: Shape (batch_size, seq_len_q, d_k)
         key: Shape (batch_size, seq_len_k, d_k)
         value: Shape (batch_size, seq_len_k, d_v)
         mask: Optional boolean mask
-    
+
     Returns:
         output: Shape (batch_size, seq_len_q, d_v)
         attention_weights: Shape (batch_size, seq_len_q, seq_len_k)
     """
     d_k = query.shape[-1]
-    
+
     # Step 1: QK^T
     attention_scores = np.matmul(query, key.transpose(0, 2, 1))
-    
+
     # Step 2: Scale
     scaled_attention_scores = attention_scores / np.sqrt(d_k)
-    
+
     # Step 3: Apply mask
     if mask is not None:
         if mask.ndim == 2:
             mask = mask[np.newaxis, :, :]
         scaled_attention_scores = np.where(mask, scaled_attention_scores, -1e9)
-    
+
     # Step 4: Softmax
     attention_weights = softmax(scaled_attention_scores, axis=-1)
-    
+
     # Step 5: Weighted sum of values
     attention_output = np.matmul(attention_weights, value)
-    
+
     return attention_output, attention_weights
 ```
 
@@ -449,32 +454,32 @@ def scaled_dot_product_attention(
 class MultiHeadAttention:
     """
     Multi-Head Attention Layer.
-    
+
     Performs attention multiple times in parallel with different
     learned projections, then combines the results.
     """
-    
+
     def __init__(self, embedding_dimension: int, num_heads: int):
         self.embedding_dimension = embedding_dimension
         self.num_heads = num_heads
         self.head_dimension = embedding_dimension // num_heads
-        
+
         # Projection layers
         self.query_projection = Linear(embedding_dimension, embedding_dimension)
         self.key_projection = Linear(embedding_dimension, embedding_dimension)
         self.value_projection = Linear(embedding_dimension, embedding_dimension)
         self.output_projection = Linear(embedding_dimension, embedding_dimension)
-    
+
     def forward(self, query, key, value, mask=None):
         batch_size = query.shape[0]
         seq_len_q = query.shape[1]
         seq_len_k = key.shape[1]
-        
+
         # Project Q, K, V
         Q = self.query_projection.forward(query)
         K = self.key_projection.forward(key)
         V = self.value_projection.forward(value)
-        
+
         # Reshape for multi-head: (batch, seq, embed) → (batch, heads, seq, head_dim)
         Q = Q.reshape(batch_size, seq_len_q, self.num_heads, self.head_dimension)
         Q = Q.transpose(0, 2, 1, 3)
@@ -482,17 +487,17 @@ class MultiHeadAttention:
         K = K.transpose(0, 2, 1, 3)
         V = V.reshape(batch_size, seq_len_k, self.num_heads, self.head_dimension)
         V = V.transpose(0, 2, 1, 3)
-        
+
         # Attention per head
         attn_output, attn_weights = scaled_dot_product_attention(Q, K, V, mask)
-        
+
         # Concatenate heads
         attn_output = attn_output.transpose(0, 2, 1, 3)
         attn_output = attn_output.reshape(batch_size, seq_len_q, self.embedding_dimension)
-        
+
         # Final projection
         output = self.output_projection.forward(attn_output)
-        
+
         return output
 ```
 
@@ -514,7 +519,7 @@ Attending to: "The cat sat on the mat"
     the  │ ░░   ░░   ░░   ░░   ▓▓   ░░  │  mostly self
     mat  │ ░░   ▓░   ▓░   ▓░   ░░   ▓▓  │  contextual
     ─────┴───────────────────────────────┘
-    
+
     ▓▓▓ = high attention (>0.3)
     ░░  = low attention (<0.1)
 ```
@@ -639,4 +644,4 @@ print(weights2[0].round(2))
 
 ---
 
-**Next Step**: Attention lets tokens communicate with each other. But we also need to process each token individually to add non-linearity. Continue to [FeedForwardNetwork.md](FeedForwardNetwork.md) to learn about the FFN component.
+**Next Step**: Attention lets tokens communicate with each other. But we also need to process each token individually to add non-linearity. Continue to [05 - FeedForwardNetwork.md](05%20-%20FeedForwardNetwork.md) to learn about the FFN component.

@@ -31,7 +31,7 @@ While attention mixes information across positions, FFN processes each position 
 
 ```
 Attention: tokens talk to each other        FFN: each token thinks alone
-      
+
     A ←→ B ←→ C ←→ D                          A → A'
          ↕                                     B → B'
     B ←→ C ←→ D                                C → C'
@@ -104,31 +104,31 @@ $$\text{GELU}(x) \approx 0.5x\left(1 + \tanh\left(\sqrt{\frac{2}{\pi}}(x + 0.044
      -1 │        ╲                       -1 │
         └──────────────────►              └──────────────────►
          -3  -2  -1   0   1   2   3         -3  -2  -1   0   1   2   3
-         
+
     GELU: Smooth, allows small               ReLU: Sharp cutoff at 0
           negative values through                  Zero gradient for x<0
 ```
 
 ### Why GELU?
 
-| Property | GELU | ReLU |
-|----------|------|------|
-| Negative inputs | Small values pass through | Completely blocked (0) |
-| Smoothness | Smooth everywhere | Sharp corner at 0 |
-| Gradient for x < 0 | Non-zero | Zero (dead neurons) |
-| Probabilistic interpretation | Input × probability of being positive | None |
+| Property                     | GELU                                  | ReLU                   |
+| ---------------------------- | ------------------------------------- | ---------------------- |
+| Negative inputs              | Small values pass through             | Completely blocked (0) |
+| Smoothness                   | Smooth everywhere                     | Sharp corner at 0      |
+| Gradient for x < 0           | Non-zero                              | Zero (dead neurons)    |
+| Probabilistic interpretation | Input × probability of being positive | None                   |
 
 ### Numeric Examples
 
 | Input x | GELU(x) | ReLU(x) |
-|---------|---------|---------|
-| -2.0 | -0.045 | 0.0 |
-| -1.0 | -0.159 | 0.0 |
-| -0.5 | -0.154 | 0.0 |
-| 0.0 | 0.0 | 0.0 |
-| 0.5 | 0.346 | 0.5 |
-| 1.0 | 0.841 | 1.0 |
-| 2.0 | 1.955 | 2.0 |
+| ------- | ------- | ------- |
+| -2.0    | -0.045  | 0.0     |
+| -1.0    | -0.159  | 0.0     |
+| -0.5    | -0.154  | 0.0     |
+| 0.0     | 0.0     | 0.0     |
+| 0.5     | 0.346   | 0.5     |
+| 1.0     | 0.841   | 1.0     |
+| 2.0     | 1.955   | 2.0     |
 
 ---
 
@@ -200,6 +200,7 @@ hidden[0] = [0.43, 0.37, 0.63, 0.57, 0.51, 0.61, 0.39, 0.49]
 ```
 
 Similarly for position 1:
+
 ```python
 hidden[1] = [0.17, 0.21, 0.23, 0.19, 0.20, 0.22, 0.29, 0.23]
 ```
@@ -277,6 +278,7 @@ d_model = 128          d_ff = 512          d_model = 128
 ### Information Bottleneck
 
 The contraction step forces the network to:
+
 - Compress information back to compact form
 - Keep only the most important transformed features
 - Discard noise introduced by expansion
@@ -306,72 +308,72 @@ From [src/transformer.py](src/transformer.py):
 class FeedForwardNetwork:
     """
     Position-wise Feed-Forward Network.
-    
+
     FFN(x) = Linear_2(GELU(Linear_1(x)))
-    
+
     This is applied independently to each position in the sequence.
     The hidden dimension is typically 4x the model dimension.
     """
-    
+
     def __init__(self, embedding_dimension: int, hidden_dimension: int = None):
         self.embedding_dimension = embedding_dimension
         self.hidden_dimension = hidden_dimension or (4 * embedding_dimension)
-        
+
         # First linear: expand from d_model to d_ff
         self.linear_1 = Linear(
             input_features=embedding_dimension,
             output_features=self.hidden_dimension
         )
-        
+
         # Second linear: compress from d_ff back to d_model
         self.linear_2 = Linear(
             input_features=self.hidden_dimension,
             output_features=embedding_dimension
         )
-        
+
         # Caches for backward pass
         self._input_cache = None
         self._hidden_cache = None
         self._activated_cache = None
-    
+
     def forward(self, input_tensor: np.ndarray) -> np.ndarray:
         """
         Forward pass through FFN.
-        
+
         Args:
             input_tensor: Shape (batch, seq_len, embedding_dim)
-        
+
         Returns:
             Output of same shape
         """
         self._input_cache = input_tensor
-        
+
         # Step 1: Expand to hidden dimension
         hidden = self.linear_1.forward(input_tensor)
         self._hidden_cache = hidden
-        
+
         # Step 2: Apply GELU activation
         activated = gelu(hidden)
         self._activated_cache = activated
-        
+
         # Step 3: Compress back to embedding dimension
         output = self.linear_2.forward(activated)
-        
+
         return output
-    
+
     def backward(self, upstream_gradient: np.ndarray) -> np.ndarray:
         """
         Backward pass through FFN.
         """
         # Backward through linear_2
         d_activated = self.linear_2.backward(upstream_gradient)
-        
+
         # Backward through GELU
         d_hidden = gelu_backward(d_activated, self._hidden_cache)
-        
+
         # Backward through linear_1
         d_input = self.linear_1.backward(d_hidden)
-        
+
         return d_input
 ```
 
@@ -383,50 +385,50 @@ From [src/activations.py](src/activations.py):
 def gelu(x: np.ndarray) -> np.ndarray:
     """
     Gaussian Error Linear Unit.
-    
+
     GELU(x) ≈ 0.5 * x * (1 + tanh(sqrt(2/pi) * (x + 0.044715 * x^3)))
-    
+
     This is the activation function used in GPT-2, GPT-3, and BERT.
     """
     sqrt_2_over_pi = np.sqrt(2.0 / np.pi)  # ≈ 0.7979
     cubic_coefficient = 0.044715
-    
+
     # Compute inner expression
     cubic_term = cubic_coefficient * np.power(x, 3)
     inner_expression = sqrt_2_over_pi * (x + cubic_term)
-    
+
     # Apply tanh and scale
     tanh_result = np.tanh(inner_expression)
     gelu_output = 0.5 * x * (1.0 + tanh_result)
-    
+
     return gelu_output
 
 
 def gelu_backward(upstream_gradient: np.ndarray, x: np.ndarray) -> np.ndarray:
     """
     Gradient of GELU.
-    
+
     d(GELU)/dx = 0.5*(1 + tanh(z)) + 0.5*x*sech²(z)*dz/dx
-    
+
     where z = sqrt(2/π)*(x + 0.044715*x³)
           dz/dx = sqrt(2/π)*(1 + 3*0.044715*x²)
     """
     sqrt_2_over_pi = np.sqrt(2.0 / np.pi)
     c = 0.044715
-    
+
     # Forward values
     z = sqrt_2_over_pi * (x + c * x**3)
     tanh_z = np.tanh(z)
-    
+
     # Derivative of z
     dz_dx = sqrt_2_over_pi * (1 + 3 * c * x**2)
-    
+
     # sech²(z) = 1 - tanh²(z)
     sech2_z = 1 - tanh_z**2
-    
+
     # Full gradient
     gelu_grad = 0.5 * (1 + tanh_z) + 0.5 * x * sech2_z * dz_dx
-    
+
     return upstream_gradient * gelu_grad
 ```
 
@@ -483,8 +485,8 @@ Before GELU:
                    Hidden Dimension →
 
 After GELU:
-─2.0│                                          
-─1.0│                                          
+─2.0│
+─1.0│
  0.0│──────────────────────────────────────────  Most negatives ≈ 0
 +1.0│    ╭─╮       ╭───╮                  ╭─╮    Positives preserved
 +2.0│  ╭─╯ │   ╭───╯   ╰──╮           ╭───╯ │
@@ -566,10 +568,10 @@ for v in [-2, -1, -0.5, 0, 0.5, 1, 2]:
 
 4. **Where Knowledge Lives**: [Geva, M., et al. (2021). Transformer Feed-Forward Layers Are Key-Value Memories](https://arxiv.org/abs/2012.14913)
 
-5. **This Repository**: 
+5. **This Repository**:
    - [src/transformer.py](src/transformer.py) for `FeedForwardNetwork` class
    - [src/activations.py](src/activations.py) for `gelu` implementation
 
 ---
 
-**Next Step**: Now we have both attention and FFN. Continue to [TransformerBlock.md](TransformerBlock.md) to see how they combine with residual connections and layer normalization.
+**Next Step**: Now we have both attention and FFN. Continue to [06 - TransformerBlock.md](06%20-%20TransformerBlock.md) to see how they combine with residual connections and layer normalization.

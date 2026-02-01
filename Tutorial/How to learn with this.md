@@ -73,24 +73,24 @@ The magic is in _how_ we teach a neural network to make these predictions, and _
 
 Each step in this learning path has a detailed accompanying document with numeric examples, visualizations, and deep explanations. These are linked at the beginning of each section.
 
-| Step | Topic | Code | Deep Dive |
-|------|-------|------|-----------|
-| 1 | Tokenization | `src/tokenizer.py` | [Tokenization.md](Tokenization.md) |
-| 2 | Embeddings | `src/layers.py` | [Embeddings.md](Embeddings.md) |
-| 3 | Positional Encoding | `src/layers.py` | [PositionalEncoding.md](PositionalEncoding.md) |
-| 4 | Attention | `src/attention.py` | [Attention.md](Attention.md) |
-| 5 | Feed-Forward Network | `src/transformer.py` | [FeedForwardNetwork.md](FeedForwardNetwork.md) |
-| 6 | Transformer Block | `src/transformer.py` | [TransformerBlock.md](TransformerBlock.md) |
-| 7 | Full GPT Model | `src/model.py` | [GPTModel.md](GPTModel.md) |
-| 8 | Training | `src/optimizer.py` | [Training.md](Training.md) |
-| 9 | Text Generation | `src/model.py` | [TextGeneration.md](TextGeneration.md) |
-| 10 | Fine-Tuning | `src/lora.py` | [FineTuning.md](FineTuning.md) |
+| Step | Topic                | Code                 | Deep Dive                                                    |
+| ---- | -------------------- | -------------------- | ------------------------------------------------------------ |
+| 1    | Tokenization         | `src/tokenizer.py`   | [01 - Tokenization.md](01%20-%20Tokenization.md)             |
+| 2    | Embeddings           | `src/layers.py`      | [02 - Embeddings.md](02%20-%20Embeddings.md)                 |
+| 3    | Positional Encoding  | `src/layers.py`      | [03 - PositionalEncoding.md](03%20-%20PositionalEncoding.md) |
+| 4    | Attention            | `src/attention.py`   | [04 - Attention.md](04%20-%20Attention.md)                   |
+| 5    | Feed-Forward Network | `src/transformer.py` | [05 - FeedForwardNetwork.md](05%20-%20FeedForwardNetwork.md) |
+| 6    | Transformer Block    | `src/transformer.py` | [06 - TransformerBlock.md](06%20-%20TransformerBlock.md)     |
+| 7    | Full GPT Model       | `src/model.py`       | [07 - GPTModel.md](07%20-%20GPTModel.md)                     |
+| 8    | Training             | `src/optimizer.py`   | [08 - Training.md](08%20-%20Training.md)                     |
+| 9    | Text Generation      | `src/model.py`       | [09 - TextGeneration.md](09%20-%20TextGeneration.md)         |
+| 10   | Fine-Tuning          | `src/lora.py`        | [10 - FineTuning.md](10%20-%20FineTuning.md)                 |
 
 ---
 
 ### Step 1: Tokenization (`src/tokenizer.py`)
 
-**Deep Dive:** [Tokenization.md](Tokenization.md) - Complete BPE walkthrough with step-by-step numeric examples
+**Deep Dive:** [01 - Tokenization.md](01%20-%20Tokenization.md) - Complete BPE walkthrough with step-by-step numeric examples
 
 **The Question:** How do we convert text into numbers that a neural network can process?
 
@@ -150,7 +150,7 @@ print(text)  # "To be or not"
 
 ### Step 2: Embeddings (`src/layers.py` - Embedding class)
 
-**Deep Dive:** [Embeddings.md](Embeddings.md) - Lookup tables, semantic similarity, and vector arithmetic examples
+**Deep Dive:** [02 - Embeddings.md](02%20-%20Embeddings.md) - Lookup tables, semantic similarity, and vector arithmetic examples
 
 **The Question:** We have token IDs (integers). How do we give these meaning?
 
@@ -194,7 +194,7 @@ For token ID 42:
 
 ### Step 3: Positional Encoding (`src/layers.py` - PositionalEncoding class)
 
-**Deep Dive:** [PositionalEncoding.md](PositionalEncoding.md) - Sinusoidal formulas with numeric example matrix
+**Deep Dive:** [03 - PositionalEncoding.md](03%20-%20PositionalEncoding.md) - Sinusoidal formulas with numeric example matrix
 
 **The Question:** Token embeddings don't know their position. How does the model know word order?
 
@@ -236,7 +236,7 @@ where:
 
 ### Step 4: Attention (`src/attention.py`)
 
-**Deep Dive:** [Attention.md](Attention.md) - Q/K/V intuition, scaled dot-product, causal masking, multi-head attention
+**Deep Dive:** [04 - Attention.md](04%20-%20Attention.md) - Q/K/V intuition, scaled dot-product, causal masking, multi-head attention
 
 **This is the heart of transformers.** Take your time here.
 
@@ -306,7 +306,7 @@ When processing "sat":
 
 ### Step 5: Feed-Forward Network (`src/transformer.py` - FeedForwardNetwork)
 
-**Deep Dive:** [FeedForwardNetwork.md](FeedForwardNetwork.md) - Expand-GELU-contract pattern with numeric walkthrough
+**Deep Dive:** [05 - FeedForwardNetwork.md](05%20-%20FeedForwardNetwork.md) - Expand-GELU-contract pattern with numeric walkthrough
 
 **The Question:** Attention lets tokens talk to each other. What processes each token individually?
 
@@ -341,7 +341,7 @@ When processing "sat":
 
 ### Step 6: Transformer Block (`src/transformer.py` - TransformerBlock)
 
-**Deep Dive:** [TransformerBlock.md](TransformerBlock.md) - Pre-LN architecture, residual connections, complete block flow
+**Deep Dive:** [06 - TransformerBlock.md](06%20-%20TransformerBlock.md) - Pre-LN architecture, residual connections, complete block flow
 
 **The Question:** How do we combine attention and feed-forward into one unit?
 
@@ -409,7 +409,7 @@ output
 
 ### Step 7: The Full Model (`src/model.py`)
 
-**Deep Dive:** [GPTModel.md](GPTModel.md) - Complete architecture diagram, weight tying, parameter count breakdown
+**Deep Dive:** [07 - GPTModel.md](07%20-%20GPTModel.md) - Complete architecture diagram, weight tying, parameter count breakdown
 
 **The Question:** How does it all fit together?
 
@@ -460,7 +460,7 @@ output
 
 ### Step 8: Training (`src/optimizer.py`, `train_pretrain.py`)
 
-**Deep Dive:** [Training.md](Training.md) - Cross-entropy loss, AdamW optimizer, learning rate scheduling
+**Deep Dive:** [08 - Training.md](08%20-%20Training.md) - Cross-entropy loss, AdamW optimizer, learning rate scheduling
 
 **The Question:** How does the model learn?
 
@@ -522,7 +522,7 @@ for batch in data:
 
 ### Step 9: Text Generation (`GPTModel.generate`)
 
-**Deep Dive:** [TextGeneration.md](TextGeneration.md) - Autoregressive generation, temperature, top-k, top-p sampling
+**Deep Dive:** [09 - TextGeneration.md](09%20-%20TextGeneration.md) - Autoregressive generation, temperature, top-k, top-p sampling
 
 **The Question:** How do we go from a trained model to actual text output?
 
@@ -565,7 +565,7 @@ for batch in data:
 
 ### Step 10: Fine-Tuning (`train_finetune_full.py`, `train_finetune_lora.py`)
 
-**Deep Dive:** [FineTuning.md](FineTuning.md) - Full fine-tuning vs LoRA, low-rank matrix decomposition
+**Deep Dive:** [10 - FineTuning.md](10%20-%20FineTuning.md) - Full fine-tuning vs LoRA, low-rank matrix decomposition
 
 **The Question:** We have a model trained on general text. How do we specialize it?
 
