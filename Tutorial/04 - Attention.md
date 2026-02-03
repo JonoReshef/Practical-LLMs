@@ -2,6 +2,9 @@
 
 The attention mechanism is what makes transformers powerful. It allows each token to "look at" all other tokens and decide which ones are relevant for understanding its context. This is the key innovation that enables modern language models.
 
+![Attention Mechanism Overview](https://jalammar.github.io/images/t/transformer_self-attention_visualization.png)
+_Self-attention allows each word to attend to all other words in the sequence, learning contextual relationships._
+
 ---
 
 ## Table of Contents
@@ -315,6 +318,9 @@ looking)│pos3 │  ✓     ✓     ✓     ✓          │
 ---
 
 ## Multi-Head Attention
+
+![Multi-Head Attention](https://jalammar.github.io/images/t/transformer_attention_heads_qkv.png)
+_Multi-head attention runs multiple attention operations in parallel, each learning different aspects of the relationships._
 
 Instead of one attention function, we run **multiple attention heads in parallel**.
 

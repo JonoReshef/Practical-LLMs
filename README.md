@@ -27,6 +27,7 @@ This repository includes a dev container configuration for VS Code that provides
 3. Click "Reopen in Container" when prompted (or use the command palette: "Dev Containers: Reopen in Container")
 
 **Included Tools:**
+
 - Python 3.14 with uv package manager
 - Claude Code CLI for AI-assisted development (run `claude` to authenticate)
 - zsh shell with common CLI tools (vim, htop, tmux, fzf, ripgrep, fd, bat, jq, tree)
@@ -40,7 +41,7 @@ For a deep understanding of each component, we provide comprehensive documentati
 
 - Mathematical formulas and derivations
 - Step-by-step numeric examples
-- Visualizations and diagrams
+- Visualizations and diagrams (including embedded images from authoritative sources)
 - References to research papers
 
 Start with [How to learn with this.md](How%20to%20learn%20with%20this.md) for a guided learning path and high level summaries of each section.

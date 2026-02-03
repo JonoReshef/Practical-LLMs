@@ -2,6 +2,9 @@
 
 After tokenization, we have sequences of integer IDs. But a neural network can't learn from raw integers - we need dense vector representations that capture semantic meaning. This is where embeddings come in.
 
+![Word Embeddings Space](https://miro.medium.com/v2/resize:fit:1400/format:webp/1*SYiW1MUZul1NvL1kc1RxwQ.png)
+_Word embeddings map words to vectors in a continuous space where semantic relationships are preserved._
+
 ---
 
 ## Table of Contents
@@ -187,6 +190,9 @@ After training, embeddings capture semantic relationships:
 ### Vector Arithmetic
 
 The famous example from Word2Vec:
+
+![Word2Vec Analogy](https://miro.medium.com/v2/resize:fit:1400/format:webp/1*jpnKO5X0Ii8PVdQYFO2z1Q.png)
+_The king - man + woman = queen analogy demonstrates how embeddings capture semantic relationships._
 
 ```
 king - man + woman ≈ queen

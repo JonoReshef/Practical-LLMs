@@ -362,9 +362,8 @@ nearby positions                  position differences
 
 The following visualization from [The Illustrated Transformer](https://jalammar.github.io/illustrated-transformer/) shows positional encodings for 20 positions (rows) with 512 dimensions (columns):
 
-![Positional Encoding Heatmap](https://jalammar.github.io/images/t/attention-is-all-you-need-positional-encoding.png)
-
-_Image credit: Jay Alammar, [The Illustrated Transformer](https://jalammar.github.io/illustrated-transformer/)_
+![Sinusoidal Positional Encoding](https://kazemnejad.com/img/transformer_architecture_positional_encoding/positional_encoding.png)
+_Each dimension of the positional encoding uses a different frequency, creating unique fingerprints for each position._
 
 **How to read this heatmap:**
 

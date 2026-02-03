@@ -2,6 +2,9 @@
 
 Text generation is where the trained model shows its capabilities. The model generates text one token at a time, using its predictions to extend a prompt into coherent continuation.
 
+![Autoregressive Text Generation](https://jalammar.github.io/images/xlnet/gpt-2-autoregression-2.gif)
+_Autoregressive generation: each token is predicted based on all previous tokens, then added to the context._
+
 ---
 
 ## Table of Contents
@@ -103,6 +106,9 @@ The quick brown fox jumps over the lazy dog..."
 ---
 
 ## Temperature Sampling
+
+![Temperature Effect on Sampling](https://shivammehta25.github.io/posts/temperature-in-language-models-open-ai-whisper-probabilistic-machine-learning/different_temperatures_continuous.jpeg)
+_Temperature controls the randomness of sampling: lower values make the distribution sharper, higher values make it flatter._
 
 **Temperature** controls the randomness of sampling by scaling the logits before softmax.
 

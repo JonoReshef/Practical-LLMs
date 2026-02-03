@@ -19,12 +19,14 @@ By studying this codebase, you'll understand:
 
 ---
 
-## Quick Start: Run the Demos
+## Quick Start
 
-Every module includes an educational demo you can run directly. This is the fastest way to see each component in action:
+Play around with this [excellent interactive transformer demo](https://poloclub.github.io/transformer-explainer/) to get an intuition for how the architecture works. There is also great content in there as well worth reading.
+
+Once you understand the basics, clone this repository and work through the modules in order:
 
 ```bash
-# Activate the environment
+uv sync
 source .venv/bin/activate
 
 # Run demos in learning order:

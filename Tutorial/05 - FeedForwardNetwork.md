@@ -2,6 +2,9 @@
 
 After attention allows tokens to communicate, the Feed-Forward Network (FFN) processes each position independently. This is where the model applies non-linear transformations and stores much of its "knowledge."
 
+![Feed-Forward Network in Transformer](https://learnopencv.com/wp-content/uploads/2017/10/mlp-diagram.jpg)
+_Trivial feed forward layer with an input and output head and one hidden layer. The activation functions can be visualized as the lines between the nodes._
+
 ---
 
 ## Table of Contents
@@ -73,6 +76,9 @@ The typical ratio is $d_{ff} = 4 \times d_{model}$
 ---
 
 ## The GELU Activation
+
+![GELU vs ReLU Activation Functions](https://www.researchgate.net/publication/370116538/figure/fig3/AS:11431281358801951@1744047564756/Comparison-of-the-ReLu-and-GeLu-activation-functions-ReLu-is-simpler-to-compute-but.tif)
+_GELU provides a smooth non-linearity compared to ReLU's sharp cutoff, allowing small negative values to pass through._
 
 ### What is GELU?
 

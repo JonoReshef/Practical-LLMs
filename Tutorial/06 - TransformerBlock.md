@@ -2,6 +2,9 @@
 
 A Transformer block is the repeating unit that gives transformers their name. It combines attention, feed-forward processing, residual connections, and layer normalization into a single modular component that can be stacked to build deep networks.
 
+![Transformer Block Architecture](https://miro.medium.com/v2/resize:fit:1400/format:webp/1*BHzGVskWGS_3jEcYYi6miQ.png)
+_A transformer block combines attention and feed-forward layers with residual connections and layer normalization._
+
 ---
 
 ## Table of Contents
@@ -69,6 +72,9 @@ Output
 ---
 
 ## Residual Connections
+
+![Residual Connection Flow](https://miro.medium.com/v2/resize:fit:1400/format:webp/1*pUyst_ciesOz_LUg0HocYg.png)
+_Residual connections allow gradients to flow directly through the network, preventing vanishing gradients._
 
 **Residual connections** (or skip connections) allow the input to "skip over" a layer and be added directly to the output.
 

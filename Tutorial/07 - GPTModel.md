@@ -2,6 +2,9 @@
 
 The GPT (Generative Pre-trained Transformer) model combines all the components we've studied into a complete language model capable of understanding and generating text.
 
+![GPT Architecture Overview](https://substackcdn.com/image/fetch/$s_!aFv8!,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F0cad60e3-cec7-4bfa-9ad1-356b6d181f7c_1640x862.png)
+_GPT models use decoder-only transformer architecture with causal self-attention for autoregressive language modeling._
+
 ---
 
 ## Table of Contents
@@ -21,6 +24,8 @@ The GPT (Generative Pre-trained Transformer) model combines all the components w
 ## Model Architecture Overview
 
 A GPT model is a **decoder-only transformer** designed for autoregressive language modeling.
+
+Before progressing further you might be wondering what the opposite of decoder-only is. The answer is **encoder-decoder** architecture, which is used in models like T5 and BERT. These models have both an encoder (to read input text) and a decoder (to generate output text). GPT models, on the other hand, only have the decoder part, which is sufficient for tasks like text generation.
 
 ### High-Level Structure
 

@@ -2,6 +2,9 @@
 
 Tokenization is the first and fundamental step in processing text for language models. Before a neural network can understand "The cat sat on the mat," we must convert these words into numerical representations.
 
+![Tokenization Process Overview](https://huggingface.co/datasets/huggingface-course/documentation-images/resolve/main/en/chapter6/bpe_subword.svg)
+_Subword tokenization breaks text into meaningful units that balance vocabulary size and sequence length._
+
 ---
 
 ## Table of Contents
@@ -82,6 +85,9 @@ Token IDs:      [892,  3421]              [892,  1205,  2341]
 ## Byte Pair Encoding (BPE) Algorithm
 
 BPE was originally a data compression algorithm, adapted for NLP by [Sennrich et al. (2016)](https://arxiv.org/abs/1508.07909). It's used in GPT-2, GPT-3, GPT-4, and many other LLMs.
+
+![BPE Merge Process](https://miro.medium.com/v2/resize:fit:1400/format:webp/1*Z8SXGY8eMD-4qKrZMRmBQQ.png)
+_The BPE algorithm iteratively merges the most frequent adjacent pairs of tokens to build the vocabulary._
 
 ### The Core Idea
 

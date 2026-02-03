@@ -2,7 +2,10 @@
 
 Training a language model involves computing the difference between predictions and targets (loss), calculating how to adjust weights (gradients), and updating parameters to minimize the loss.
 
----
+![Neural Network Training Loop](https://miro.medium.com/v2/resize:fit:1400/1*J-v2B6T9RKxdvwThtQ1NVg.png)
+_The training loop: forward pass, loss computation, backpropagation, and parameter update._
+
+![Gradient Descent](https://framerusercontent.com/images/q4rcYPvBQCQ4csP932i2gUQkOJQ.webp?width=1300&height=778) _Gradient descent iteratively updates model parameters to minimize the loss._
 
 ## Table of Contents
 
@@ -52,6 +55,9 @@ Update:       Move weights to reduce loss
 ---
 
 ## Cross-Entropy Loss
+
+![Cross-Entropy Loss Function](https://miro.medium.com/v2/resize:fit:1400/format:webp/1*MdMdJYT6O0K8CqEU4FnYJQ.png)
+_Cross-entropy loss measures how different the predicted distribution is from the true distribution._
 
 **Cross-entropy loss** measures how different the predicted probability distribution is from the true distribution.
 
@@ -209,6 +215,9 @@ $$\theta_t = \theta_{t-1} - \alpha \cdot \frac{\hat{m}_t}{\sqrt{\hat{v}_t} + \ep
 ---
 
 ## Learning Rate Scheduling
+
+![Learning Rate Schedule](https://raw.githubusercontent.com/rasbt/machine-learning-book/main/ch11/figures/11_05.png)
+_A typical learning rate schedule with warmup followed by cosine decay helps stabilize training._
 
 A fixed learning rate is rarely optimal. Modern training uses **schedules**.
 

@@ -2,6 +2,9 @@
 
 Fine-tuning adapts a pre-trained model to new tasks or domains. We'll explore both full fine-tuning and LoRA (Low-Rank Adaptation), a parameter-efficient technique that trains only a small fraction of parameters.
 
+![Transfer Learning Pipeline](https://www.researchgate.net/publication/385629006/figure/fig2/AS:11431281289117434@1731026104322/llustration-of-our-transfer-learning-pipeline-that-adapts-ImageNet-pre-trained.png)
+_Fine-tuning leverages pre-trained knowledge and adapts the model to specific downstream tasks._
+
 ---
 
 ## Table of Contents
@@ -23,12 +26,12 @@ Fine-tuning adapts a pre-trained model to new tasks or domains. We'll explore bo
 
 Pre-trained models learn general language patterns, but we often want specialized behavior:
 
-| Goal | Fine-Tuning Approach |
-|------|---------------------|
-| Domain adaptation | Train on domain-specific text (medical, legal, code) |
-| Task specialization | Train on Q&A, summarization, translation pairs |
-| Style transfer | Train on text with specific writing style |
-| Instruction following | Train on instruction-response pairs |
+| Goal                  | Fine-Tuning Approach                                 |
+| --------------------- | ---------------------------------------------------- |
+| Domain adaptation     | Train on domain-specific text (medical, legal, code) |
+| Task specialization   | Train on Q&A, summarization, translation pairs       |
+| Style transfer        | Train on text with specific writing style            |
+| Instruction following | Train on instruction-response pairs                  |
 
 ### The Transfer Learning Pipeline
 
@@ -71,7 +74,7 @@ for batch in task_data:
     logits = model.forward(batch.input)
     loss = compute_loss(logits, batch.target)
     gradients = model.backward(loss)
-    
+
     # Update ALL parameters
     for param in model.parameters:
         param -= learning_rate * gradients[param]
@@ -124,6 +127,7 @@ Total storage: 4× the base model
 ### 3. Training Efficiency
 
 Updating all parameters means:
+
 - Large gradient tensors
 - More memory for optimizer states (Adam stores 2× parameters)
 - Slower training iterations
@@ -141,6 +145,7 @@ Instead of changing weights $W$ to $W'$, learn a **low-rank update**:
 $$W' = W + \Delta W = W + BA$$
 
 Where:
+
 - $W$: Original frozen weights $(d_{out} \times d_{in})$
 - $B$: Trainable matrix $(d_{out} \times r)$
 - $A$: Trainable matrix $(r \times d_{in})$
@@ -326,13 +331,13 @@ y = y_base + lora_out * 2.0
 
 ### Choosing Rank
 
-| Rank | Parameters | Capacity | Use Case |
-|------|------------|----------|----------|
-| r=1 | Minimal | Very limited | Simple style transfer |
-| r=4 | ~0.5% | Good for most tasks | Default choice |
-| r=8 | ~1% | Higher capacity | Complex tasks |
-| r=16 | ~2% | High capacity | Challenging domains |
-| r=64+ | ~8%+ | Near full fine-tuning | Rarely needed |
+| Rank  | Parameters | Capacity              | Use Case              |
+| ----- | ---------- | --------------------- | --------------------- |
+| r=1   | Minimal    | Very limited          | Simple style transfer |
+| r=4   | ~0.5%      | Good for most tasks   | Default choice        |
+| r=8   | ~1%        | Higher capacity       | Complex tasks         |
+| r=16  | ~2%        | High capacity         | Challenging domains   |
+| r=64+ | ~8%+       | Near full fine-tuning | Rarely needed         |
 
 ### Which Layers to Adapt?
 
@@ -381,17 +386,17 @@ From [src/lora.py](src/lora.py):
 class LoRALinear:
     """
     Linear layer with LoRA (Low-Rank Adaptation).
-    
+
     Forward computation:
         output = x @ W^T + x @ A^T @ B^T * (alpha/rank) + bias
-    
+
     Where:
     - W: Frozen base weights (d_out, d_in)
     - A: Trainable down-projection (rank, d_in)
     - B: Trainable up-projection (d_out, rank) - initialized to zeros
     - scaling = alpha / rank
     """
-    
+
     def __init__(
         self,
         input_features: int,
@@ -406,47 +411,47 @@ class LoRALinear:
         self.rank = rank
         self.alpha = alpha
         self.scaling = alpha / rank
-        
+
         # Base (frozen) weights
         if base_weights is not None:
             self.base_weights = base_weights.copy()
         else:
             weight_std = np.sqrt(2.0 / (input_features + output_features))
             self.base_weights = np.random.randn(output_features, input_features) * weight_std
-        
+
         self.base_bias = base_bias.copy() if base_bias is not None else None
-        
+
         # LoRA matrices (trainable)
         # A: initialized with small random values
         a_std = np.sqrt(2.0 / input_features)
         self.lora_A = np.random.randn(rank, input_features) * a_std
-        
+
         # B: initialized to zeros (critical!)
         self.lora_B = np.zeros((output_features, rank))
-    
+
     def forward(self, input_tensor: np.ndarray) -> np.ndarray:
         """Forward pass with LoRA adaptation."""
         self._input_cache = input_tensor
-        
+
         # Base model contribution (frozen)
         base_output = np.matmul(input_tensor, self.base_weights.T)
-        
+
         # LoRA contribution (trainable)
         # input @ A^T -> (batch, seq, rank)
         lora_intermediate = np.matmul(input_tensor, self.lora_A.T)
         self._lora_intermediate_cache = lora_intermediate
-        
+
         # intermediate @ B^T -> (batch, seq, output_features)
         lora_output = np.matmul(lora_intermediate, self.lora_B.T)
-        
+
         # Combine with scaling
         output = base_output + lora_output * self.scaling
-        
+
         if self.base_bias is not None:
             output = output + self.base_bias
-        
+
         return output
-    
+
     def backward(self, upstream_gradient: np.ndarray) -> np.ndarray:
         """
         Backward pass - only compute gradients for LoRA matrices.
@@ -466,23 +471,23 @@ def apply_lora_to_model(
 ) -> GPTModel:
     """
     Apply LoRA adapters to a pre-trained GPT model.
-    
+
     This modifies the model in-place, replacing specified Linear layers
     with LoRALinear equivalents that have frozen base weights and
     trainable LoRA parameters.
-    
+
     Args:
         model: Pre-trained GPT model
         rank: LoRA rank (bottleneck dimension)
         alpha: LoRA scaling factor
         target_modules: Which attention projections to adapt
-    
+
     Returns:
         Model with LoRA adapters (same object, modified)
     """
     for layer in model.transformer_stack.layers:
         attn = layer.self_attention
-        
+
         # Replace attention projections with LoRA versions
         if "query" in target_modules:
             attn.query_linear = LoRALinear(
@@ -494,7 +499,7 @@ def apply_lora_to_model(
                 base_bias=attn.query_linear.bias,
             )
         # Similarly for key, value, output...
-    
+
     return model
 ```
 
@@ -513,29 +518,29 @@ def train_step_lora(
 ) -> float:
     """
     LoRA fine-tuning step.
-    
+
     Key difference: Only LoRA parameters are updated!
     """
     # Forward pass
     logits = model.forward(inputs)
-    
+
     # Compute loss
     loss = cross_entropy_loss(logits, targets)
-    
+
     # Backward pass
     grad_logits = cross_entropy_loss_backward(logits, targets)
     model.backward(grad_logits)
-    
+
     # Get ONLY LoRA gradients (base weights have no gradients)
     lora_gradients = get_lora_gradients(model)
-    
+
     # Clip
     lora_gradients = clip_gradient_norm(lora_gradients, max_grad_norm)
-    
+
     # Update ONLY LoRA parameters
     lora_params = get_lora_parameters(model)
     optimizer.step(lora_gradients, lora_params, learning_rate)
-    
+
     return loss
 ```
 
@@ -555,30 +560,32 @@ Full Fine-Tuning:
 LoRA (rank=4):
   Trainable: ~8,192 (0.8%)
   Storage per adapter: 8,192 × 4 bytes = 33 KB
-  
+
 Savings: ~128× fewer parameters per adapter!
 ```
 
 ### Performance Comparison
 
-| Metric | Full Fine-Tuning | LoRA |
-|--------|-----------------|------|
-| Parameters trained | 100% | 0.5-2% |
-| Memory during training | High | Low |
-| Training speed | Slower | Faster |
-| Risk of forgetting | Higher | Lower |
-| Adapter storage | Large | Tiny |
-| Performance | Excellent | Very Good |
+| Metric                 | Full Fine-Tuning | LoRA      |
+| ---------------------- | ---------------- | --------- |
+| Parameters trained     | 100%             | 0.5-2%    |
+| Memory during training | High             | Low       |
+| Training speed         | Slower           | Faster    |
+| Risk of forgetting     | Higher           | Lower     |
+| Adapter storage        | Large            | Tiny      |
+| Performance            | Excellent        | Very Good |
 
 ### When to Use Each
 
 **Use Full Fine-Tuning when:**
+
 - Unlimited compute and storage
 - Task is very different from pretraining
 - Maximum performance is critical
 - Only one specialized model needed
 
 **Use LoRA when:**
+
 - Limited compute/memory
 - Multiple tasks/domains
 - Quick experimentation
@@ -594,6 +601,7 @@ For inference, LoRA weights can be **merged** into base weights:
 $$W_{merged} = W + BA \cdot \frac{\alpha}{r}$$
 
 After merging:
+
 - No inference overhead
 - Single weight matrix
 - Can't easily swap adapters
@@ -613,6 +621,7 @@ def merge_lora_weights(lora_layer: LoRALinear) -> np.ndarray:
 ### Prerequisites
 
 First, train a base model:
+
 ```bash
 python train_pretrain.py
 ```
@@ -664,6 +673,7 @@ print(f"Rank 16: {count_lora_parameters(model_r16):,} trainable")
 **Congratulations!** You've completed the learning path for understanding GPT language models from the ground up. From tokenization to generation to fine-tuning, you now understand how modern language models work at a fundamental level.
 
 **What's Next?**
+
 - Experiment with the code in this repository
 - Try training on different datasets
 - Implement your own extensions (e.g., top-p sampling, rotary embeddings)
